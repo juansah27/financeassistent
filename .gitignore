@@ -80,3 +80,6 @@ whatsapp-bot/sessions/
 # Browser/runtime cache
 **/.wwebjs_auth/
 **/.wwebjs_cache/
+# WhatsApp auth/session credentials - DO NOT COMMIT
+whatsapp-bot/auth_info/
+**/auth_info/
