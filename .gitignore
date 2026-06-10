@@ -1,0 +1,82 @@
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+
+env/
+venv/
+ENV/
+.venv/
+.venv
+
+# Environment files
+
+.env
+.env.*
+!.env.example
+
+# Database / local storage
+
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+
+# Logs
+
+*.log
+logs/
+
+# Test / cache
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Backup files
+
+*.bak
+*.backup
+*.bak_*
+backup/
+backups/
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Editor
+
+.vscode/
+.idea/
+
+# Docker local override
+
+docker-compose.override.yml
+
+# Node / frontend if exists
+
+node_modules/
+dist/
+build/
+.next/
+
+# Windows downloaded file metadata
+*Zone.Identifier
+*:Zone.Identifier
+
+# WhatsApp Web auth/session data - DO NOT COMMIT
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/.wwebjs_cache/
+whatsapp-bot/session/
+whatsapp-bot/sessions/
+
+# Browser/runtime cache
+**/.wwebjs_auth/
+**/.wwebjs_cache/

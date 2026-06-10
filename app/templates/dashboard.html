@@ -1,0 +1,763 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Family Finance Assistant{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Force native calendar dropdown to be dark when in dark mode */
+    .dark {
+        color-scheme: dark;
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+    <!-- Header Actions & Filters -->
+    <div
+        class="flex flex-row items-center justify-between gap-6 animate-fade-in mb-8 w-full overflow-x-auto no-scrollbar pb-1">
+        <!-- Kiri: Quick Actions -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+            <a href="/add" class="btn btn-primary h-[44px] px-5 rounded-xl">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+                <span class="hidden md:inline">Transaksi Baru</span>
+            </a>
+            <button class="btn btn-secondary h-[44px] px-5 rounded-xl"
+                onclick="window.location.href='/reports?export=pdf'">
+                <i data-lucide="download" class="w-5 h-5"></i>
+                <span class="hidden md:inline">Export Data</span>
+                <span class="md:hidden">Export</span>
+            </button>
+            <button class="btn btn-ghost h-[44px] px-5 rounded-xl" onclick="window.location.href='/budget'">
+                <i data-lucide="wallet" class="w-5 h-5"></i>
+                <span class="hidden md:inline">Kelola Budget</span>
+                <span class="md:hidden">Budget</span>
+            </button>
+        </div>
+
+        <!-- Kanan: Grouped Filter & Period -->
+        <div class="flex items-center gap-6 ml-auto flex-shrink-0">
+            <!-- Period Display with Enhanced Style -->
+            <div class="hidden lg:flex flex-col items-end">
+                <span
+                    class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Periode
+                    Aktif</span>
+                <p id="global-period-display"
+                    class="text-sm font-semibold text-primary-600 dark:text-primary-400 whitespace-nowrap"></p>
+            </div>
+
+            <div
+                class="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="flex items-center gap-1.5 px-2">
+                    <input type="date" id="filter-start-date"
+                        class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-medium outline-none w-[130px] cursor-pointer [color-scheme:light] dark:[color-scheme:dark]">
+                    <span class="text-gray-400 font-bold">→</span>
+                    <input type="date" id="filter-end-date"
+                        class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-medium outline-none w-[130px] cursor-pointer [color-scheme:light] dark:[color-scheme:dark]">
+                </div>
+                <button id="filter-apply-btn"
+                    class="btn btn-primary w-[38px] h-[38px] !p-0 rounded-lg shadow-md hover:shadow-primary/20 transition-all">
+                    <i data-lucide="filter" class="w-4 h-4 mx-auto"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <!-- Income Card -->
+        <div class="card-stat animate-fade-in">
+            <div class="card-stat-icon gradient-emerald">
+                <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+            </div>
+            <p class="card-stat-label">Total Pendapatan</p>
+            <h3 class="card-stat-value" id="stat-income">Rp {{ "{:,.0f}".format(stats.income) }}</h3>
+            <p class="card-stat-change" id="stat-income-desc">
+                Periode ini
+            </p>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="card-stat animate-fade-in" style="animation-delay: 0.1s;">
+            <div class="card-stat-icon gradient-primary">
+                <i data-lucide="wallet" class="w-6 h-6 text-white"></i>
+            </div>
+            <p class="card-stat-label">Sisa Saldo</p>
+            <h3 class="card-stat-value text-primary-600 dark:text-primary-400" id="stat-balance">Rp {{
+                "{:,.0f}".format(stats.balance) }}</h3>
+            <p class="card-stat-change" id="stat-balance-desc">
+                Periode ini
+            </p>
+        </div>
+
+        <!-- Daily Average Card -->
+        <div class="card-stat animate-fade-in" style="animation-delay: 0.3s;">
+            <div class="card-stat-icon bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                <i data-lucide="activity" class="w-6 h-6"></i>
+            </div>
+            <p class="card-stat-label">Rata-rata Harian</p>
+            <h3 class="card-stat-value" id="stat-avg-daily">Rp {{ "{:,.0f}".format(avg_daily) }}</h3>
+            <p class="card-stat-change" id="stat-avg-daily-desc">
+                Periode ini
+            </p>
+        </div>
+
+        <!-- Projected Expenses Card (Next Month) -->
+        <div class="card-stat animate-fade-in" style="animation-delay: 0.4s;">
+            <!-- Gradient Overlay -->
+            <div
+                class="absolute inset-0 bg-gradient-to-br from-orange-50/60 via-transparent to-transparent dark:from-orange-900/10 pointer-events-none">
+            </div>
+            <div
+                class="absolute inset-0 border border-orange-200/40 dark:border-orange-900/20 rounded-xl pointer-events-none">
+            </div>
+
+            <div class="relative flex flex-col h-full z-10">
+                <div class="flex items-center gap-4 mb-auto">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shadow-sm animate-pulse-slow">
+                        <i data-lucide="calendar-clock" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="card-stat-label mb-0">Proyeksi Pengeluaran</p>
+                        <h3 class="card-stat-value text-xl md:text-2xl !mb-0">Rp {{
+                            "{:,.0f}".format(projected.total) }}</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 w-full mt-4">
+                    <div
+                        class="p-2.5 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm backdrop-blur-sm">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Rutin</p>
+                        <p class="text-sm font-bold text-gray-900 dark:text-white">Rp {{
+                            "{:,.0f}".format(projected.recurring) }}</p>
+                    </div>
+                    <div
+                        class="p-2.5 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm backdrop-blur-sm">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Non-Rutin
+                        </p>
+                        <p class="text-sm font-bold text-gray-900 dark:text-white">Rp {{
+                            "{:,.0f}".format(projected.variable) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts & Breakdown Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Cash Flow Chart -->
+        <div class="lg:col-span-2 card animate-fade-in flex flex-col" style="animation-delay: 0.4s;">
+            <div class="p-6 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">Cash Flow</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Ringkasan aliran kas</p>
+                    </div>
+                </div>
+
+                <div class="relative flex-1 min-h-[300px] w-full">
+                    <canvas id="cashFlowChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="card animate-fade-in" style="animation-delay: 0.5s;">
+            <div class="p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-primary-500"></i>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Kategori Pengeluaran</h3>
+                </div>
+
+                <div id="category-breakdown-container" class="space-y-4">
+                    {% if stats.category_breakdown %}
+                    <div class="space-y-4">
+                        {% for category, amount in stats.category_breakdown.items() %}
+                        {% if stats.expenses > 0 %}
+                        {% set percentage = (amount / stats.expenses * 100) %}
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ category
+                                    }}</span>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ percentage|int
+                                        }}%</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">Rp {{
+                                        "{:,.0f}".format(amount) }}</span>
+                                </div>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: {{ percentage }}%"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">Belum ada data kategori</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Overview & More Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Budget Overview -->
+        <div class="card animate-fade-in" style="animation-delay: 0.52s;">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-5 h-5 text-primary-500"></i>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Budget Overview</h3>
+                    </div>
+                    <a href="/budget" class="btn btn-secondary btn-sm">
+                        <span>Kelola</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-6">
+                {% if budgets and budgets|length > 0 %}
+                <div class="space-y-3">
+                    {% for budget in budgets[:5] %}
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ budget.category
+                                }}</span>
+                            <div class="text-right">
+                                <span
+                                    class="text-sm font-bold {% if budget.is_over %}text-danger{% elif budget.percentage >= 80 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ "{:.0f}".format(budget.percentage) }}%
+                                </span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                    Rp {{ "{:,.0f}".format(budget.actual) }} / {{ "{:,.0f}".format(budget.budget) }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar {% if budget.is_over %}bg-danger{% elif budget.percentage >= 80 %}bg-warning{% else %}bg-success{% endif %}"
+                                style="width: {{ (budget.percentage if budget.percentage <= 100 else 100) }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if budgets|length > 5 %}
+                    <div class="text-center pt-2">
+                        <a href="/budget" class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                            +{{ budgets|length - 5 }} kategori lainnya →
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i data-lucide="wallet" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                    <p class="text-sm mb-2">Belum ada budget bulan ini</p>
+                    <a href="/budget" class="btn btn-primary btn-sm">
+                        <i data-lucide="plus" class="w-3 h-3"></i>
+                        <span>Atur Budget</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- Transaction Lists Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Recurring Transactions -->
+            <div class="card animate-fade-in" style="animation-delay: 0.55s;">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="repeat" class="w-5 h-5 text-primary-500"></i>
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Transaksi Rutin</h2>
+                        </div>
+                        <a href="/recurring" class="btn btn-secondary btn-sm">
+                            <span>Kelola</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto" style="overflow-y: hidden;">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left w-[40%]">Deskripsi</th>
+                                <th class="px-4 py-3 text-left w-[25%]">Frekuensi</th>
+                                <th class="px-4 py-3 text-left w-[15%]">Jatuh Tempo</th>
+                                <th class="px-4 py-3 text-right w-[20%]">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recurring_transactions %}
+                            {% for recurring in recurring_transactions[:10] %}
+                            <tr class="">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="min-w-0 max-w-[200px]">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                                {{ recurring.description }}
+                                            </p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ recurring.category }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="badge badge-neutral text-xs">
+                                        {% if recurring.recurrence_type.value == 'daily' %}Harian
+                                        {% elif recurring.recurrence_type.value == 'weekly' %}Mingguan
+                                        {% elif recurring.recurrence_type.value == 'monthly' %}Bulanan
+                                        {% elif recurring.recurrence_type.value == 'yearly' %}Tahunan
+                                        {% elif recurring.recurrence_type.value == 'custom' %}Per {{
+                                        recurring.interval_days
+                                        }} Hari
+                                        {% else %}{{ recurring.recurrence_type.value }}{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center">
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                                            {{ recurring.next_due_date.strftime('%d-%m-%y') if
+                                            recurring.next_due_date
+                                            else
+                                            '-' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span
+                                        class="text-sm font-bold {% if recurring.type.value == 'Pemasukan' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if recurring.type.value == 'Pemasukan' %}+{% else %}-{% endif %}Rp {{
+                                        "{:,.0f}".format(recurring.amount) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                    <p class="text-sm">Belum ada transaksi rutin aktif</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="card animate-fade-in" style="animation-delay: 0.6s;">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-row items-center justify-between gap-4 w-full flex-nowrap">
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <i data-lucide="receipt" class="w-5 h-5 text-primary-500"></i>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">Transaksi
+                                Terkini</h2>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink ml-auto">
+                            <a href="/transactions"
+                                class="btn btn-primary !h-10 px-4 rounded-xl flex items-center justify-center whitespace-nowrap flex-shrink-0 shadow-sm">
+                                <span class="hidden sm:inline mr-1.5">Detail</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </a>
+                            <a href="/analytics"
+                                class="btn btn-secondary !h-10 px-4 rounded-xl flex items-center justify-center whitespace-nowrap flex-shrink-0 shadow-sm">
+                                <span class="hidden sm:inline mr-1.5">Analitik</span>
+                                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto" style="overflow-y: hidden;">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left w-[40%]">Deskripsi</th>
+                                <th class="px-4 py-3 text-left w-[25%]">Kategori</th>
+                                <th class="px-4 py-3 text-left w-[15%]">Tanggal</th>
+                                <th class="px-4 py-3 text-right w-[20%]">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if transactions %}
+                            {% for transaction in transactions[:10] %}
+                            <tr class="transaction-row cursor-pointer"
+                                onclick="window.location.href='/transaction/{{ transaction.id }}'">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="min-w-0 max-w-[200px]">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                                {{
+                                                transaction.description or transaction.raw_input or "Transaksi" }}
+                                            </p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{
+                                                transaction.raw_input or
+                                                "" }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="badge badge-neutral text-xs">{{ transaction.category }}</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ transaction.created_at
+                                        |
+                                        format_datetime_jakarta("%d-%m-%y") }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span
+                                        class="text-sm font-bold {% if transaction.type.value == 'Pemasukan' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if transaction.type.value == 'Pemasukan' %}+{% else %}-{% endif %}Rp {{
+                                        "{:,.0f}".format(transaction.amount) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="px-4 py-12 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <i data-lucide="inbox"
+                                            class="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4"></i>
+                                        <p class="text-gray-500 dark:text-gray-400 font-medium">Belum ada transaksi
+                                        </p>
+                                        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Mulai dengan
+                                            menambahkan
+                                            transaksi pertama Anda!</p>
+                                        <a href="/add" class="btn btn-primary btn-sm mt-4">
+                                            <i data-lucide="plus" class="w-4 h-4"></i>
+                                            <span>Tambah Transaksi</span>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block extra_scripts %}
+    <script>
+        // Search functionality
+        const searchInput = document.getElementById('search-transactions');
+        if (searchInput) {
+            searchInput.addEventListener('input', function (e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('.transaction-row');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+        }
+
+        // Cash Flow Chart & Global Stats
+        const ctx = document.getElementById('cashFlowChart');
+        if (ctx) {
+            function getChartColors() {
+                const isDark = document.documentElement.classList.contains('dark');
+                return {
+                    gridColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                    tickColor: isDark ? '#9CA3AF' : '#6B7280',
+                    textColor: isDark ? '#E5E7EB' : '#374151'
+                };
+            }
+
+            const weeklyStats = {{ weekly_stats | tojson
+        }};
+
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: weeklyStats.map(d => d.day),
+                datasets: [{
+                    label: 'Pendapatan',
+                    data: weeklyStats.map(d => d.income),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }, {
+                    label: 'Pengeluaran',
+                    data: weeklyStats.map(d => d.expense),
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutQuart',
+                    delay: (context) => context.dataIndex * 100
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: getChartColors().textColor,
+                            font: { size: 12, weight: '600', family: "'Inter', sans-serif" },
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                        titleColor: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827',
+                        bodyColor: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#4B5563',
+                        borderColor: document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: '700', family: "'Inter', sans-serif" },
+                        bodyFont: { size: 13, family: "'Inter', sans-serif" },
+                        displayColors: true,
+                        boxPadding: 4,
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': Rp ' + context.parsed.y.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: getChartColors().gridColor,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: getChartColors().tickColor,
+                            font: { size: 11 },
+                            callback: function (value) {
+                                if (value >= 1000000) {
+                                    return 'Rp ' + (value / 1000000).toFixed(1) + 'M';
+                                } else if (value >= 1000) {
+                                    return 'Rp ' + (value / 1000).toFixed(0) + 'k';
+                                }
+                                return 'Rp ' + value;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: getChartColors().tickColor,
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Date Inputs to Current Month
+        const dateStartInfo = document.getElementById('filter-start-date');
+        const dateEndInfo = document.getElementById('filter-end-date');
+
+        if (dateStartInfo && dateEndInfo) {
+            const today = new Date();
+            const startDay = {{ start_day|default (1)
+        }};
+
+        let startYear = today.getFullYear();
+        let startMonth = today.getMonth(); // 0-indexed
+
+        // Logic similar to backend: if today < startDay, we are in previous month's cycle
+        if (today.getDate() < startDay) {
+            startMonth -= 1;
+        }
+
+        const firstDay = new Date(startYear, startMonth, startDay);
+
+        // Format to YYYY-MM-DD
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        dateStartInfo.value = formatDate(firstDay);
+        dateEndInfo.value = formatDate(today);
+
+        // Trigger Load
+        fetchData(dateStartInfo.value, dateEndInfo.value);
+    }
+
+        // Apply Filter Event
+        const applyBtn = document.getElementById('filter-apply-btn');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function () {
+                const start = document.getElementById('filter-start-date').value;
+                const end = document.getElementById('filter-end-date').value;
+                if (start && end) {
+                    fetchData(start, end);
+                }
+            });
+        }
+
+        async function fetchData(start, end) {
+            try {
+                // Fetch new data from backend with date range
+                const response = await fetch(`/api/dashboard/cash-flow?start_date=${start}&end_date=${end}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update chart
+                    chart.data.labels = data.chart.map(c => c.label);
+                    chart.data.datasets[0].data = data.chart.map(c => c.income);
+                    chart.data.datasets[1].data = data.chart.map(c => c.expense);
+                    chart.update();
+
+                    // Update Stats Cards
+                    const elIncome = document.getElementById('stat-income');
+                    const elBalance = document.getElementById('stat-balance');
+                    const elAvg = document.getElementById('stat-avg-daily');
+
+                    if (elIncome) elIncome.textContent = 'Rp ' + data.summary.income.toLocaleString('id-ID');
+                    if (elBalance) elBalance.textContent = 'Rp ' + data.summary.balance.toLocaleString('id-ID');
+                    if (elAvg) elAvg.textContent = 'Rp ' + data.summary.avg_daily.toLocaleString('id-ID');
+
+                    // Update description texts
+                    // Update description texts
+                    const elIncomeDesc = document.getElementById('stat-income-desc');
+                    const elBalanceDesc = document.getElementById('stat-balance-desc');
+                    const elAvgDesc = document.getElementById('stat-avg-daily-desc');
+                    if (elIncomeDesc) elIncomeDesc.textContent = 'Periode ini';
+                    if (elBalanceDesc) elBalanceDesc.textContent = 'Periode ini';
+                    if (elAvgDesc) elAvgDesc.textContent = 'Periode ini';
+
+                    // Update Category Breakdown (Moved up for safety)
+                    const catContainer = document.getElementById('category-breakdown-container');
+                    if (catContainer) {
+                        if (data.category_breakdown && Object.keys(data.category_breakdown).length > 0) {
+                            let html = '<div class="space-y-4">';
+                            const expenses = data.summary.expense || 1; // Avoid div by zero
+
+                            // Sort categories by value desc
+                            const sortedCats = Object.entries(data.category_breakdown)
+                                .sort(([, a], [, b]) => b - a);
+
+                            sortedCats.forEach(([category, amount]) => {
+                                const percentage = (amount / expenses * 100).toFixed(0);
+                                html += `
+                                <div class="category-item">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">${category}</span>
+                                        <div class="text-right">
+                                            <span class="text-sm font-bold text-gray-900 dark:text-white">${percentage}%</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">Rp ${amount.toLocaleString('id-ID')}</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" style="width: ${percentage}%"></div>
+                                    </div>
+                                </div>`;
+                            });
+                            html += '</div>';
+                            catContainer.innerHTML = html;
+                        } else {
+                            catContainer.innerHTML = `
+                                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                                    <p class="text-sm">Belum ada data kategori</p>
+                                </div>
+                            `;
+                            if (typeof lucide !== 'undefined') {
+                                lucide.createIcons();
+                            }
+                        }
+                    }
+
+                    // Update Period Display
+                    const elPeriod = document.getElementById('global-period-display');
+                    if (elPeriod && data.period && data.period.start && data.period.end) {
+                        try {
+                            const dStart = new Date(data.period.start);
+                            const dEnd = new Date(data.period.end);
+                            const opts = { day: 'numeric', month: 'short', year: 'numeric' };
+                            elPeriod.textContent = `${dStart.toLocaleDateString('id-ID', opts)} - ${dEnd.toLocaleDateString('id-ID', opts)}`;
+                        } catch (e) {
+                            console.error("Date error:", e);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        // Update chart colors on dark mode toggle
+        const observer = new MutationObserver(() => {
+            const colors = getChartColors();
+            chart.options.scales.y.grid.color = colors.gridColor;
+            chart.options.scales.y.ticks.color = colors.tickColor;
+            chart.options.scales.x.ticks.color = colors.tickColor;
+            chart.options.plugins.legend.labels.color = colors.textColor;
+            chart.update('none');
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+    }
+
+        // Load Budget Overview
+        async function loadBudgetOverview() {
+            const container = document.getElementById('budget-overview-container');
+            if (!container) return;
+
+            try {
+                container.innerHTML = `
+                <div class="space-y-3">
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i data-lucide="wallet" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                        <p class="text-sm mb-2">Data budget tersedia di halaman budget</p>
+                        <a href="/budget" class="btn btn-primary btn-sm">
+                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            <span>Lihat Budget</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Error loading budget overview:', error);
+            }
+        }
+
+        // Load budget on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBudgetOverview();
+        });
+    </script>
+    {% endblock %}

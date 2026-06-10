@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Asisten AI - Family Finance Assistant{% endblock %}
+
+{% block header_title %}Assistant{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+    <!-- Page Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Asisten AI</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Analisis keuangan Anda dengan AI</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analysis Card -->
+    <div class="card-stat gradient-purple mb-8 animate-fade-in">
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+            Analisis Keuangan Bulan Ini
+        </h2>
+        <div class="bg-white/20 dark:bg-black/30 rounded-lg p-5 backdrop-blur">
+            <p class="text-white leading-relaxed">{{ analysis }}</p>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="card mb-8 animate-fade-in" style="animation-delay: 0.1s;">
+        <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="message-square" class="w-5 h-5 text-primary-500"></i>
+                Tanya Asisten Keuangan
+            </h3>
+
+            <!-- Chat Container -->
+            <div id="chat-container"
+                class="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 h-96 overflow-y-auto mb-4 border border-gray-100 dark:border-gray-700">
+                <!-- Welcome Message -->
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-2xl rounded-tl-none p-3 shadow-sm border border-gray-100 dark:border-gray-600 max-w-[80%] text-sm">
+                        <p>
+                            Halo! Saya asisten keuangan Anda. Ada yang bisa saya bantu?
+                            <br><br>
+                            Anda bisa tanya tentang:
+                        </p>
+                        <ul class="list-disc list-inside mt-2 space-y-1">
+                            <li>Cek saldo saya</li>
+                            <li>Tagihan bulan depan</li>
+                            <li>Analisa pengeluaran bulan ini</li>
+                            <li>Apa pengeluaran terbesar saya?</li>
+                            <li>Cek target goal</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <form id="chat-form" class="flex gap-2">
+                <input type="text" id="user-input"
+                    class="flex-1 form-input rounded-xl border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Tulis pertanyaan Anda disini..." required>
+                <button type="submit" id="send-btn"
+                    class="btn gradient-primary text-white rounded-xl px-4 hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2">
+                    <span>Kirim</span>
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card-stat gradient-teal animate-fade-in" style="animation-delay: 0.1s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Pemasukan</p>
+            <h3 class="text-2xl font-bold text-white">Rp {{ "{:,.0f}".format(stats.income) }}</h3>
+        </div>
+        <div class="card-stat gradient-pink animate-fade-in" style="animation-delay: 0.15s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="trending-down" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Pengeluaran</p>
+            <h3 class="text-2xl font-bold text-white">Rp {{ "{:,.0f}".format(stats.expenses) }}</h3>
+        </div>
+        <div class="card-stat gradient-blue animate-fade-in" style="animation-delay: 0.2s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Sisa</p>
+            <h3 class="text-2xl font-bold text-white">Rp {{ "{:,.0f}".format(stats.balance) }}</h3>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    {% if stats.category_breakdown %}
+    <div class="card animate-fade-in" style="animation-delay: 0.25s;">
+        <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-5 h-5 text-primary-500"></i>
+                Rincian Pengeluaran
+            </h3>
+            <div class="space-y-5">
+                {% for category, amount in stats.category_breakdown.items() %}
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-700 dark:text-gray-300 font-medium">{{ category }}</span>
+                        <span class="font-bold text-gray-900 dark:text-white">Rp {{ "{:,.0f}".format(amount) }}</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary"
+                            style="width: {{ (amount / stats.expenses * 100) if stats.expenses > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tips Section -->
+    <div class="card animate-fade-in bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500"
+        style="animation-delay: 0.3s;">
+        <div class="p-6">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="lightbulb" class="w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+                Tips Keuangan
+            </h3>
+            <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                <li class="flex items-start gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5"></i>
+                    <span>Catat semua transaksi secara rutin untuk analisis yang lebih akurat</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5"></i>
+                    <span>Gunakan bahasa Indonesia yang natural saat mencatat transaksi</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5"></i>
+                    <span>Review pengeluaran per kategori untuk mengidentifikasi area penghematan</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatContainer = document.getElementById('chat-container');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Simple markdown-like formatter
+        function formatMessage(text) {
+            if (!text) return "";
+            return text
+                .replace(/\*(.*?)\*/g, '<strong>$1</strong>')       // Bold
+                .replace(/_(.*?)_/g, '<em>$1</em>')               // Italic
+                .replace(/^• (.*)$/gm, '<li>$1</li>')              // Bullet point •
+                .replace(/^- (.*)$/gm, '<li>$1</li>')              // Bullet point -
+                .replace(/\n/g, '<br>');                           // Newline
+        }
+
+        // Add message to chat
+        function addMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = `flex items-start gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in`;
+
+            const avatar = isUser ? `
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="user" class="w-4 h-4 text-gray-500 dark:text-gray-400"></i>
+                </div>
+            ` : `
+                <div class="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+            `;
+
+            const bubbleClass = isUser
+                ? 'gradient-primary text-white rounded-2xl rounded-tr-none'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-2xl rounded-tl-none border border-gray-100 dark:border-gray-600';
+
+            const formattedText = isUser ? text : formatMessage(text);
+            const content = isUser ? `<p>${formattedText}</p>` : `<div class="text-sm max-w-none">${formattedText}</div>`;
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="${bubbleClass} p-3 shadow-sm max-w-[80%]">
+                    ${content}
+                </div>
+            `;
+
+            chatContainer.appendChild(div);
+            scrollToBottom();
+
+            // Re-initialize icons for new elements
+            lucide.createIcons();
+        }
+
+        // Add loading indicator
+        function addLoading() {
+            const div = document.createElement('div');
+            div.id = 'loading-bubble';
+            div.className = 'flex items-start gap-3 mb-4 animate-fade-in';
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="bg-white dark:bg-gray-700 rounded-2xl rounded-tl-none p-4 shadow-sm border border-gray-100 dark:border-gray-600">
+                    <div class="flex gap-1">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            lucide.createIcons();
+        }
+
+        function removeLoading() {
+            const loading = document.getElementById('loading-bubble');
+            if (loading) loading.remove();
+        }
+
+        chatForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            userInput.value = '';
+
+            // Add loading
+            addLoading();
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/qna/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: message })
+                });
+
+                const data = await response.json();
+                removeLoading();
+
+                if (response.ok) {
+                    addMessage(data.answer);
+                } else {
+                    addMessage("Maaf, terjadi kesalahan saat memproses pertanyaan Anda.");
+                }
+            } catch (error) {
+                removeLoading();
+                addMessage("Maaf, terjadi kesalahan koneksi.");
+                console.error(error);
+            } finally {
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        });
+    });
+</script>
+{% endblock %}

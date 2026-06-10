@@ -1,0 +1,571 @@
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-3 mb-2">
+            <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                <i data-lucide="message-circle" class="w-7 h-7 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">WhatsApp Report Settings</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Configure automated daily financial reports</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Main Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column - Configuration -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Status Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-gray-900/50 border border-gray-200 dark:border-gray-600 p-6">
+                <!-- ... existing header ... -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div
+                            class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <i data-lucide="activity" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Report Status</h2>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Current automation status</p>
+                        </div>
+                    </div>
+                    <div id="statusBadge"
+                        class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                        <i data-lucide="loader" class="w-4 h-4 inline-block"></i> Loading...
+                    </div>
+                </div>
+
+                <!-- Last Sent Info -->
+                <div id="lastSentCard"
+                    class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 border border-gray-200 dark:border-gray-600 hidden">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="clock" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Last Sent</p>
+                            <p id="lastSentText" class="text-xs text-gray-500 dark:text-gray-400">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Connection Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-gray-900/50 border border-gray-200 dark:border-gray-600 p-6">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div
+                        class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <i data-lucide="smartphone" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">WhatsApp Connection</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Device connection status</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center space-y-4 py-4">
+                    <!-- Connection Status Icon/QR -->
+                    <div id="connectionStatusContainer" class="flex flex-col items-center justify-center w-full">
+                        <div class="animate-pulse">
+                            <i data-lucide="loader-2" class="w-8 h-8 text-gray-400"></i>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Checking connection...</p>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <button id="resetSessionBtn" type="button"
+                        class="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 underline mt-2 hidden">
+                        Reset Connection (Logout)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Configuration Card -->
+            <form id="reportSettingsForm"
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-gray-900/50 border border-gray-200 dark:border-gray-600 p-6">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div
+                        class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                        <i data-lucide="settings" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Configuration</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Set up your report preferences</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Enable Toggle -->
+                    <div
+                        class="flex items-center justify-between p-5 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <i data-lucide="zap" class="w-6 h-6 text-primary-500 dark:text-primary-400"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <label for="enabledToggle"
+                                    class="text-base font-bold text-gray-900 dark:text-white cursor-pointer">
+                                    Laporan Otomatis
+                                </label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Kirim laporan harian secara otomatis
+                                    ke WhatsApp</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer group">
+                            <input type="checkbox" id="enabledToggle" class="sr-only peer" checked>
+                            <div
+                                class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 dark:peer-focus:ring-offset-gray-900 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-6 rtl:peer-checked:after:-translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600 shadow-inner">
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Time Picker -->
+                    <div class="space-y-2">
+                        <label
+                            class="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>Delivery Time</span>
+                        </label>
+                        <div class="relative">
+                            <input type="time" id="reportTime" value="10:00" required
+                                class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all [color-scheme:light] dark:[color-scheme:dark]">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i data-lucide="calendar" class="w-5 h-5 text-gray-400 dark:text-gray-500"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-300 flex items-center space-x-1">
+                            <i data-lucide="info" class="w-3 h-3"></i>
+                            <span>Reports will be sent daily at this time</span>
+                        </p>
+                    </div>
+
+                    <!-- WhatsApp Group Selection -->
+                    <div class="space-y-2">
+                        <label
+                            class="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                            <span>Target WhatsApp Group</span>
+                        </label>
+                        <select id="groupSelect" required
+                            class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all [color-scheme:light] dark:[color-scheme:dark]">
+                            <option value="">Loading groups...</option>
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-300 flex items-center space-x-1">
+                            <i data-lucide="shield-check" class="w-3 h-3"></i>
+                            <span>Choose the group to receive daily reports</span>
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                        <button type="submit"
+                            class="flex-1 flex items-center justify-center space-x-2 px-6 py-3 gradient-primary text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/50 dark:hover:shadow-purple-500/30 transform hover:-translate-y-0.5 transition-all duration-200">
+                            <i data-lucide="save" class="w-5 h-5"></i>
+                            <span>Save Settings</span>
+                        </button>
+                        <button type="button" id="testNowBtn"
+                            class="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-green-500/50 dark:hover:shadow-green-500/30 transform hover:-translate-y-0.5 transition-all duration-200"
+                            style="color: white !important;">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                            <span>Test Send Now</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Column - Preview & Info -->
+        <div class="space-y-6">
+
+            <!-- Preview Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-gray-900/50 border border-gray-200 dark:border-gray-600 p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div
+                        class="w-10 h-10 bg-green-50 dark:bg-green-900/40 rounded-lg flex items-center justify-center border border-green-200 dark:border-green-700">
+                        <i data-lucide="eye" class="w-5 h-5 text-green-700 dark:text-green-300"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Report Preview</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-300">How it looks in WhatsApp</p>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 dark:bg-gray-800/50 rounded-xl p-4 border border-green-200 dark:border-green-700/50">
+                    <div class="space-y-2 text-sm font-mono text-gray-700 dark:text-gray-200"
+                        style="white-space: pre-wrap;">📊 <strong class="text-gray-900 dark:text-white">Laporan Keuangan
+                            Harian</strong>
+                        📅 Senin, 05 Januari 2026
+
+                        💸 Pengeluaran: Rp 350,000
+                        💰 Sisa Saldo: -Rp 150,000
+                        📝 Total Transaksi: 5
+                        🏆 Terbesar: Konsumsi (Rp 200,000)
+
+                        <strong class="text-gray-900 dark:text-white">💡 Insight AI:</strong>
+                        Pengeluaran hari ini melebihi pemasukan.
+                        Coba lebih hemat ya! 💪
+
+                        🔍 Lihat detail di dashboard
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="gradient-primary rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-purple-900/50 p-6"
+                style="color: white;">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
+                        <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold">How It Works</h3>
+                </div>
+                <ul class="space-y-3 text-sm" style="color: white;">
+                    <li class="flex items-start space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span style="color: white;">Reports sent automatically every day</span>
+                    </li>
+                    <li class="flex items-start space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span style="color: white;">AI analyzes your spending patterns</span>
+                    </li>
+                    <li class="flex items-start space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span style="color: white;">Delivered directly to WhatsApp group</span>
+                    </li>
+                    <li class="flex items-start space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span style="color: white;">No setup needed after saving</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSchedule = null;
+    let hasShownConnectionError = false;
+
+    // Load current schedule and groups
+    async function loadSettings() {
+        try {
+            // Load current schedule
+            const scheduleResponse = await fetch('/api/whatsapp/report-schedule');
+            const scheduleData = await scheduleResponse.json();
+
+            if (scheduleData.success && scheduleData.schedule) {
+                currentSchedule = scheduleData.schedule;
+                document.getElementById('enabledToggle').checked = currentSchedule.is_enabled;
+                document.getElementById('reportTime').value = currentSchedule.report_time || '10:00';
+
+                // Update status badge
+                updateStatusBadge(currentSchedule.is_enabled);
+
+                if (currentSchedule.last_sent_at) {
+                    document.getElementById('lastSentCard').classList.remove('hidden');
+                    const lastSent = new Date(currentSchedule.last_sent_at);
+                    document.getElementById('lastSentText').textContent = lastSent.toLocaleString('id-ID');
+                }
+            }
+
+            // Load WhatsApp groups
+            const groupsResponse = await fetch('/api/whatsapp/groups');
+            const groupsData = await groupsResponse.json();
+
+            const groupSelect = document.getElementById('groupSelect');
+            groupSelect.innerHTML = '<option value="">-- Select Group --</option>';
+
+            if (groupsData.success && groupsData.groups && groupsData.groups.length > 0) {
+                groupsData.groups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.name;
+                    option.dataset.groupName = group.name;
+
+                    if (currentSchedule && currentSchedule.group_id === group.id) {
+                        option.selected = true;
+                    }
+
+                    groupSelect.appendChild(option);
+                });
+            } else {
+                groupSelect.innerHTML = '<option value="">No groups available</option>';
+            }
+
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            showAlert('Failed to load settings: ' + error.message, 'error');
+        }
+    }
+
+    // Update status badge
+    function updateStatusBadge(isEnabled) {
+        const badge = document.getElementById('statusBadge');
+        if (isEnabled) {
+            badge.className = 'px-4 py-2 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 flex items-center space-x-2';
+            badge.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i><span>Active</span>';
+        } else {
+            badge.className = 'px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center space-x-2';
+            badge.innerHTML = '<i data-lucide="pause-circle" class="w-4 h-4"></i><span>Inactive</span>';
+        }
+        lucide.createIcons();
+    }
+
+    // Toggle status on switch change
+    document.getElementById('enabledToggle').addEventListener('change', function () {
+        updateStatusBadge(this.checked);
+    });
+
+    // Save settings
+    document.getElementById('reportSettingsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const groupSelect = document.getElementById('groupSelect');
+        const selectedOption = groupSelect.options[groupSelect.selectedIndex];
+
+        if (!selectedOption || !selectedOption.value) {
+            showAlert('Please select a WhatsApp group first', 'warning');
+            return;
+        }
+
+        const data = {
+            is_enabled: document.getElementById('enabledToggle').checked,
+            report_time: document.getElementById('reportTime').value,
+            group_id: selectedOption.value,
+            group_name: selectedOption.dataset.groupName
+        };
+
+        try {
+            const response = await fetch('/api/whatsapp/report-schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Settings saved successfully!', 'success');
+                loadSettings(); // Reload to get updated data
+            } else {
+                showAlert('Failed to save: ' + (result.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            showAlert('An error occurred: ' + error.message, 'error');
+        }
+    });
+
+    // Test send now
+    document.getElementById('testNowBtn').addEventListener('click', async function () {
+        const btn = this;
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        try {
+            btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i><span>Sending...</span>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            const response = await fetch('/api/whatsapp/report-schedule/test', {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Report sent successfully to WhatsApp!', 'success');
+                loadSettings(); // Reload to update last_sent_at
+            } else {
+                showAlert('Failed to send: ' + (result.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            console.error('Error sending test report:', error);
+            showAlert('An error occurred: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    });
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        const icons = {
+            success: 'check-circle',
+            error: 'alert-circle',
+            warning: 'alert-triangle'
+        };
+        const colors = {
+            success: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',
+            error: 'bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
+            warning: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200'
+        };
+
+        alertDiv.className = `mb-6 p-4 rounded-xl border ${colors[type]} flex items-center space-x-3 animate-fade-in`;
+        alertDiv.innerHTML = `
+        <i data-lucide="${icons[type]}" class="w-5 h-5 flex-shrink-0"></i>
+        <span class="flex-1">${message}</span>
+        <button onclick="this.parentElement.remove()" class="hover:opacity-70">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    `;
+
+        document.getElementById('alertContainer').appendChild(alertDiv);
+        lucide.createIcons();
+
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Load connection status
+    async function checkConnectionStatus() {
+        const container = document.getElementById('connectionStatusContainer');
+        const resetBtn = document.getElementById('resetSessionBtn');
+
+        try {
+            const response = await fetch('/api/whatsapp/connection-status');
+            const data = await response.json();
+
+            if (data.success) {
+                // Reset error flag if we're back online
+                hasShownConnectionError = false;
+
+                if (data.status === 'connected') {
+                    container.innerHTML = `
+                        <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
+                             <i data-lucide="smartphone" class="w-8 h-8 text-green-600 dark:text-green-400"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-green-600 dark:text-green-400">Connected</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">WhatsApp is connected and monitoring messages.</p>
+                    `;
+                    resetBtn.classList.remove('hidden');
+                } else if (data.status === 'scanning' && data.qr) {
+                    // Use QR Server API for rendering
+                    const encodedQR = encodeURIComponent(data.qr);
+                    container.innerHTML = `
+                        <div class="bg-white p-2 rounded-lg border border-gray-200">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedQR}" alt="Scan QR Code" class="w-48 h-48">
+                        </div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white mt-3">Scan with WhatsApp</p>
+                        <p class="text-xs text-gray-500 text-center max-w-xs">Open WhatsApp > Settings > Linked Devices > Link a Device</p>
+                    `;
+                    resetBtn.classList.add('hidden'); // Hide reset button when scanning
+                } else {
+                    // Disconnected or connecting
+                    container.innerHTML = `
+                        <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-2 animate-pulse">
+                             <i data-lucide="loader" class="w-8 h-8 text-gray-400"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-600 dark:text-gray-300">Connecting...</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">Waiting for bot to initialize...</p>
+                    `;
+                    resetBtn.classList.add('hidden');
+                }
+            } else {
+                container.innerHTML = `
+                    <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-2">
+                         <i data-lucide="alert-circle" class="w-8 h-8 text-red-600 dark:text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-red-600 dark:text-red-400">Bot Error</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center">${data.error || 'WhatsApp bot is currently unavailable.'}</p>
+                `;
+                
+                if (!hasShownConnectionError) {
+                    showAlert('WhatsApp Bot Error: ' + (data.error || 'Bot is unreachable'), 'error');
+                    hasShownConnectionError = true;
+                }
+            }
+        } catch (error) {
+            console.error('Connection check error:', error);
+            container.innerHTML = `
+                <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-2">
+                     <i data-lucide="wifi-off" class="w-8 h-8 text-red-600 dark:text-red-400"></i>
+                </div>
+                <h3 class="text-lg font-medium text-red-600 dark:text-red-400">Connection Failed</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 text-center">Failed to connect to bot service.</p>
+            `;
+            
+            if (!hasShownConnectionError) {
+                showAlert('Failed to connect to WhatsApp Bot service', 'error');
+                hasShownConnectionError = true;
+            }
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Reset Session
+    document.getElementById('resetSessionBtn').addEventListener('click', async function () {
+        if (!confirm('Are you sure you want to reset the WhatsApp connection? You will need to scan the QR code again.')) return;
+
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Resetting...';
+
+        try {
+            const response = await fetch('/api/whatsapp/logout', { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Session reset. Please wait for QR code...', 'success');
+                // Force immediate check
+                setTimeout(checkConnectionStatus, 1000);
+            } else {
+                showAlert('Failed to reset: ' + result.error, 'error');
+            }
+        } catch (e) {
+            showAlert('Error resetting: ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Reset Connection (Logout)';
+        }
+    });
+
+    // Load settings on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        checkConnectionStatus();
+        // Poll every 5 seconds
+        setInterval(checkConnectionStatus, 5000);
+    });
+</script>
+
+<style>
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fade-in 0.3s ease-out;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+</style>

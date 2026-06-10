@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Family Finance Assistant{% endblock %}</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Design System & Components -->
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <link href="/static/css/components.css" rel="stylesheet">
+    <link href="/static/css/tailwind.css" rel="stylesheet">
+
+    <!-- Dark Mode Script (load early to prevent flash) -->
+    <script src="/static/js/darkmode.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+
+    <!-- Dynamic Sidebar & Brand Styles -->
+    <style>
+        body {
+            --current-sidebar-width: 260px;
+        }
+
+        body.sidebar-collapsed {
+            --current-sidebar-width: 70px;
+        }
+
+        /* Sidebar & Layout Transitions */
+        #sidebar,
+        #main-content,
+        #brand-container,
+        .breadcrumb-separator {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Default (Expanded) State */
+        #brand-container {
+            width: var(--current-sidebar-width);
+            padding-left: 1.5rem;
+            /* px-6 */
+        }
+
+        .brand-logo-icon {
+            display: none !important;
+        }
+
+        .brand-text-content {
+            display: block !important;
+        }
+
+        /* Collapsed State */
+        body.sidebar-collapsed #sidebar {
+            width: var(--current-sidebar-width) !important;
+        }
+
+        body.sidebar-collapsed #sidebar .ginee-nav-item>span,
+        body.sidebar-collapsed #sidebar .ginee-chevron,
+        body.sidebar-collapsed #sidebar .ginee-service-btn span {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed #sidebar .ginee-nav-item,
+        body.sidebar-collapsed #sidebar .ginee-service-btn {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        body.sidebar-collapsed #sidebar .ginee-submenu {
+            display: none !important;
+            /* Hide submenus in collapsed mode */
+        }
+
+        body.sidebar-collapsed #main-content {
+            margin-left: var(--current-sidebar-width) !important;
+        }
+
+        body.sidebar-collapsed #brand-container {
+            width: var(--current-sidebar-width);
+            padding-left: 0;
+            padding-right: 0;
+            justify-content: center;
+        }
+
+        body.sidebar-collapsed .brand-logo-icon {
+            display: flex !important;
+        }
+
+        body.sidebar-collapsed .brand-text-content {
+            display: none !important;
+        }
+
+        /* Breadcrumb Alignment: Sidebar Width + 10% */
+        .breadcrumb-separator {
+            margin-left: 0 !important;
+            padding-left: calc(var(--current-sidebar-width) / 10) !important;
+            box-sizing: content-box !important;
+            background-clip: content-box !important;
+        }
+
+        /* Mobile Responsive Safety */
+        @media (max-width: 767px) {
+            #brand-container {
+                width: auto !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                border-right: none !important;
+            }
+
+            .brand-text-content {
+                display: none !important;
+            }
+
+            .brand-logo-icon {
+                display: flex !important;
+            }
+
+            .breadcrumb-separator {
+                margin-left: 1rem !important;
+            }
+        }
+
+        /* JIT Polyfill for Dark Mode Toggles */
+        .dark .dark\:hidden {
+            display: none !important;
+        }
+
+        .dark .dark\:block {
+            display: block !important;
+        }
+    </style>
+
+    {% if user %}
+    <!-- ===== TOPBAR (Header-First Layout: Full Width) ===== -->
+    <header
+        class="layout-header-fixed fixed top-0 left-0 right-0 h-[64px] z-[1060] bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 transition-colors duration-200 overflow-visible">
+        <div class="flex items-center justify-between h-full px-0 overflow-visible">
+            <!-- Left Zone: Logo + Hamburger + Page Title -->
+            <div class="flex items-center">
+                <!-- Brand Container (Dynamic Width) -->
+                <a href="/dashboard" id="brand-container"
+                    class="flex items-center h-full border-r border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <!-- Logo Icon (Visible only when Collapsed) -->
+                    <div
+                        class="brand-logo-icon w-8 h-8 gradient-primary rounded-lg items-center justify-center shadow-sm">
+                        <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+                    </div>
+
+                    <!-- Brand Text (Visible only when Expanded) -->
+                    <div class="brand-text-content">
+                        <span class="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Finance
+                            Assistant</span>
+                    </div>
+                </a>
+
+                <!-- Hamburger (mobile only) -->
+                <button id="sidebar-toggle"
+                    class="md:hidden ml-4 flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Page Title separator (desktop only) -->
+                <div class="hidden md:block w-px h-8 bg-gray-300 dark:bg-gray-700 breadcrumb-separator"></div>
+
+                <!-- Page Title -->
+                <h1
+                    class="ml-6 text-xl font-bold text-gray-800 dark:text-gray-200 truncate max-w-[150px] md:max-w-none">
+                    {% block header_title %}Dashboard{% endblock %}
+                </h1>
+                <!-- Page Actions (from child templates) -->
+                <div class="flex items-center gap-2 ml-auto md:ml-0">
+                    {% block header_actions %}{% endblock %}
+                </div>
+            </div>
+
+            <!-- Center Zone: Global Search -->
+            <div class="flex-1 hidden md:flex justify-center px-6">
+                <div class="relative w-full max-w-md group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search"
+                            class="h-4 w-4 text-gray-400 group-focus-within:text-primary-500 transition-colors"></i>
+                    </div>
+                    <input type="text"
+                        class="block w-full pl-10 pr-12 py-2 border-none rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:bg-white dark:focus:bg-gray-900 shadow-sm transition-all text-sm"
+                        placeholder="Search...">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <kbd
+                            class="hidden lg:inline-flex items-center h-5 px-1.5 text-[10px] font-medium text-gray-500 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm">⌘K</kbd>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Zone: Actions -->
+            <div class="flex items-center gap-3">
+                <!-- Theme Toggle -->
+                <button onclick="toggleDarkMode()"
+                    class="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+                    title="Toggle Theme">
+                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden text-amber-500"></i>
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block text-indigo-400"></i>
+                </button>
+
+                <!-- Notifications -->
+                <div class="relative group z-50 notification-container">
+                    <a href="/notifications"
+                        class="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        {% if unread_notifications and unread_notifications|length > 0 %}
+                        <span
+                            class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{{
+                            unread_notifications|length }}</span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Hover Preview Dropdown (Custom CSS Solution) -->
+                    <style>
+                        /* Custom CSS to force functionality even without Tailwind JIT */
+                        .notification-dropdown {
+                            display: none;
+                            position: absolute;
+                            top: 100%;
+                            right: 0;
+                            /* Removed margin-top to allow bridge */
+                            margin-top: 0;
+                            padding-top: 1rem;
+                            /* Increased bridge area */
+                            width: 24rem;
+                            /* Wider for better readability */
+                            z-index: 9999;
+                        }
+
+                        /* Invisible Bridge to prevent mouse gap */
+                        .notification-dropdown::before {
+                            content: "";
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            height: 1rem;
+                            /* Matches padding-top */
+                            background: transparent;
+                        }
+
+                        /* Hover State with Delay */
+                        .notification-container:hover .notification-dropdown {
+                            display: block !important;
+                            animation: fadeIn 0.15s ease-out forwards;
+                        }
+
+                        /* Dark Mode Support for Manual CSS */
+                        .dark .notification-header {
+                            background-color: rgba(31, 41, 55, 0.95) !important;
+                            /* gray-800 */
+                            border-color: #374151 !important;
+                            /* gray-700 */
+                        }
+
+                        .dark .notification-footer {
+                            background-color: rgba(17, 24, 39, 0.5) !important;
+                            /* gray-900/50 */
+                            border-color: #374151 !important;
+                            /* gray-700 */
+                        }
+
+                        .notification-header {
+                            background-color: rgba(249, 250, 251, 0.95);
+                            /* gray-50 */
+                        }
+
+                        .notification-footer {
+                            background-color: #f9fafb;
+                            /* gray-50 */
+                        }
+
+                        @keyframes fadeIn {
+                            from {
+                                opacity: 0;
+                                transform: translateY(-5px);
+                            }
+
+                            to {
+                                opacity: 1;
+                                transform: translateY(0);
+                            }
+                        }
+                    </style>
+
+                    <div class="notification-dropdown">
+                        <div
+                            class="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden ring-1 ring-black ring-opacity-5">
+                            <div
+                                class="notification-header p-3 border-b border-gray-100 flex items-center justify-between backdrop-blur-sm">
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Notifikasi</h3>
+                                <div class="flex items-center gap-3">
+                                    {% if unread_notifications %}
+                                    <span id="notif-badge-count"
+                                        class="text-xs text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">{{
+                                        unread_notifications|length }} Baru</span>
+                                    {% endif %}
+
+                                    <!-- Mark All as Read Action (AJAX) -->
+                                    <button type="button" onclick="markAllNotificationsRead(this)"
+                                        class="text-[10px] font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-300 transition-colors"
+                                        title="Tandai semua sudah dibaca">
+                                        Mark all read
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="notification-list" class="max-h-[350px] overflow-y-auto">
+                                {% if unread_notifications %}
+                                {% for notif in unread_notifications[:5] %}
+                                <a href="/notifications"
+                                    class="block p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b last:border-0 border-gray-100 dark:border-gray-700 group/item">
+                                    <div class="flex gap-3">
+                                        <div class="flex-shrink-0 mt-0.5">
+                                            <div
+                                                class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover/item:bg-blue-100 dark:group-hover/item:bg-blue-900/40 transition-colors">
+                                                <i data-lucide="info" class="w-4 h-4"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{
+                                                notif.title }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{{
+                                                notif.message }}</p>
+                                            <p class="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+                                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                                {{ notif.created_at | format_datetime_jakarta("%d %b %H:%M") }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                {% else %}
+                                <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                    <div
+                                        class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <i data-lucide="bell" class="w-6 h-6 text-gray-400 dark:text-gray-500"></i>
+                                    </div>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-200">Tidak ada notifikasi
+                                        baru</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="notification-footer p-2 border-t border-gray-100 text-center">
+                                <a href="/notifications"
+                                    class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center justify-center gap-1">
+                                    Lihat Semua Notifikasi
+                                    <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    async function markAllNotificationsRead(btn) {
+                        const originalText = btn.innerText;
+                        btn.innerText = "Processing...";
+                        btn.disabled = true;
+
+                        try {
+                            const response = await fetch('/api/notifications/read-all', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            if (response.ok) {
+                                // Update UI
+                                const badge = document.getElementById('notif-badge-count');
+                                if (badge) badge.style.display = 'none';
+
+                                const pBadge = document.querySelector('.notification-container span.bg-red-500');
+                                if (pBadge) pBadge.style.display = 'none';
+
+                                const list = document.getElementById('notification-list');
+                                list.innerHTML = `
+                                    <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                        <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i data-lucide="check-circle" class="w-6 h-6 text-green-500 dark:text-green-400"></i>
+                                        </div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-gray-200">Semua sudah dibaca</p>
+                                    </div>
+                                `;
+                                lucide.createIcons();
+                                btn.innerText = "Done";
+                            }
+                        } catch (error) {
+                            console.error('Error marking notifications read:', error);
+                            btn.innerText = "Error";
+                        } finally {
+                            setTimeout(() => {
+                                btn.innerText = originalText;
+                                btn.disabled = false;
+                            }, 2000);
+                        }
+                    }
+                </script>
+
+                <!-- Clock -->
+                <div
+                    class="hidden md:flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                    <span id="current-time"></span>
+                </div>
+
+                <!-- Divider -->
+                <span
+                    style="width: 1px; height: 32px; background-color: #374151; display: block; margin-left: 1rem; margin-right: 0.5rem;"></span>
+
+                <!-- User Profile (Stacked Layout) -->
+                <div class="h-10 pl-2 flex items-center gap-3 group cursor-pointer"
+                    onclick="window.location.href='/settings'">
+                    <div class="flex flex-col items-end mr-1">
+                        <span class="text-base font-bold text-gray-900 dark:text-white leading-tight">{{ user.username
+                            }}</span>
+                        <a href="/logout" class="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+                            onclick="event.stopPropagation();">Log Out</a>
+                    </div>
+                    <div
+                        class="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-lg font-bold shadow-md ring-2 ring-white dark:ring-gray-800 transition-transform group-hover:scale-105">
+                        {{ user.username[:1] | upper }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    {% endif %}
+
+    <!-- ===== SIDEBAR (Sidebar-Below-Header) ===== -->
+    <aside id="sidebar"
+        class="layout-sidebar-fixed fixed top-[64px] left-0 bottom-0 w-[260px] bg-white dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 transform -translate-x-full md:translate-x-0 transition-transform duration-200 z-[1050] flex flex-col h-[calc(100vh-64px)]">
+
+        <!-- No Brand Header Here (Moved to Topbar) -->
+
+        <!-- B) Navigation Menu -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <!-- Dashboard -->
+            <a href="/dashboard" class="ginee-nav-item {% if request.url.path == '/dashboard' %}active{% endif %}"
+                title="Dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Dashboard</span>
+            </a>
+
+            <!-- Transactions (with submenu) -->
+            <div class="ginee-nav-group">
+                <a href="/transactions"
+                    class="ginee-nav-item w-full {% if '/transactions' in request.url.path or '/transaction/' in request.url.path or '/reports' in request.url.path %}active{% endif %}"
+                    onclick="handleSubmenuClick(event, this)" title="Transactions">
+                    <i data-lucide="receipt" class="w-5 h-5 flex-shrink-0"></i>
+                    <span class="flex-1 text-sm font-medium text-left">Transactions</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 ginee-chevron flex-shrink-0"></i>
+                </a>
+                <div
+                    class="ginee-submenu {% if '/transactions' in request.url.path or '/transaction/' in request.url.path or '/reports' in request.url.path %}open{% endif %}">
+                    <a href="/transactions"
+                        class="ginee-submenu-item {% if request.url.path == '/transactions' and not 'transaction_type' in request.url|string %}active{% endif %}">
+                        All Transactions
+                    </a>
+                    <a href="/transactions?transaction_type=income"
+                        class="ginee-submenu-item {% if request.url.path == '/transactions' and 'transaction_type=income' in request.url|string %}active{% endif %}">
+                        Income
+                    </a>
+                    <a href="/transactions?transaction_type=expense"
+                        class="ginee-submenu-item {% if request.url.path == '/transactions' and 'transaction_type=expense' in request.url|string %}active{% endif %}">
+                        Expenses
+                    </a>
+                </div>
+            </div>
+
+            <!-- Payment -->
+            <a href="/recurring" class="ginee-nav-item {% if request.url.path == '/recurring' %}active{% endif %}"
+                title="Payment">
+                <i data-lucide="repeat" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Payment</span>
+            </a>
+
+            <!-- Exchange / Analytics -->
+            <a href="/analytics" class="ginee-nav-item {% if request.url.path == '/analytics' %}active{% endif %}"
+                title="Exchange">
+                <i data-lucide="bar-chart-2" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Exchange</span>
+            </a>
+
+            <!-- Predictions -->
+            <a href="/predictions" class="ginee-nav-item {% if request.url.path == '/predictions' %}active{% endif %}"
+                title="Predictions">
+                <i data-lucide="trending-up" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Predictions</span>
+            </a>
+
+            <!-- Integration -->
+            <a href="/assistant" class="ginee-nav-item {% if request.url.path == '/assistant' %}active{% endif %}"
+                title="Integration">
+                <i data-lucide="link" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Integration</span>
+            </a>
+
+            <!-- Assets -->
+            <a href="/assets" class="ginee-nav-item {% if '/assets' in request.url.path %}active{% endif %}"
+                title="Assets">
+                <i data-lucide="briefcase" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Assets</span>
+            </a>
+
+            <!-- Budget -->
+            <a href="/budget" class="ginee-nav-item {% if request.url.path == '/budget' %}active{% endif %}"
+                title="Budget">
+                <i data-lucide="zap" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Budget</span>
+            </a>
+
+            <div class="ginee-divider"></div>
+
+            <!-- Settings -->
+            <a href="/settings" class="ginee-nav-item {% if request.url.path == '/settings' %}active{% endif %}"
+                title="Settings">
+                <i data-lucide="settings" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-medium">Settings</span>
+            </a>
+        </nav>
+
+        <!-- C) Bottom Support Button -->
+        <div class="p-3 flex-shrink-0 border-t border-gray-200 dark:border-gray-800">
+            <!-- Sidebar Toggle (Desktop & Mobile Debug) -->
+            <button id="desktop-sidebar-toggle" class="ginee-nav-item w-full mb-1 flex justify-center"
+                title="Toggle Sidebar">
+                <svg id="desktop-toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" class="transition-transform duration-200">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+                <span class="text-sm font-medium ml-3 sidebar-text">Collapse</span>
+            </button>
+
+            <!-- Theme Toggle (Moved to Header) -->
+
+            <!-- Logout (Removed from here, moved to header) -->
+
+            <!-- Service Button -->
+            <button class="ginee-service-btn mt-3">
+                <i data-lucide="headset" class="w-4 h-4"></i>
+                <span class="text-sm font-medium">Service</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay"
+        class="layout-overlay-fixed fixed top-[64px] left-0 right-0 bottom-0 bg-black/30 z-[1040] hidden md:hidden transition-opacity duration-200">
+    </div>
+
+    <!-- ===== MAIN CONTENT AREA ===== -->
+    <main id="main-content"
+        class="layout-main-shifted md:ml-[260px] min-h-screen transition-all duration-200 bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <!-- Content (offset for fixed topbar) -->
+        <div class="layout-wrapper space-y-6 pt-[88px]">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        // ===== MOBILE SIDEBAR TOGGLE =====
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const toggleBtn = document.getElementById('sidebar-toggle');
+
+        function openSidebar() {
+            if (sidebar) {
+                sidebar.classList.remove('-translate-x-full');
+            }
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function closeSidebar() {
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
+        if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar on link click (mobile)
+        document.querySelectorAll('#sidebar a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) closeSidebar();
+            });
+        });
+
+        // ===== DESKTOP SIDEBAR TOGGLE =====
+        const desktopToggleBtn = document.getElementById('desktop-sidebar-toggle');
+
+        // Load state
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            document.body.classList.add('sidebar-collapsed');
+        }
+
+        function updateToggleIcon() {
+            const icon = document.getElementById('desktop-toggle-icon');
+            if (icon) {
+                if (document.body.classList.contains('sidebar-collapsed')) {
+                    icon.style.transform = 'rotate(180deg)'; // Point right
+                } else {
+                    icon.style.transform = 'rotate(0deg)'; // Point left
+                }
+            }
+        }
+
+        // Initial icon update
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateToggleIcon);
+        } else {
+            updateToggleIcon();
+        }
+
+        if (desktopToggleBtn) {
+            desktopToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
+                updateToggleIcon();
+            });
+        }
+
+        // ===== SUBMENU HANDLER =====
+        function handleSubmenuClick(e, el) {
+            if (document.body.classList.contains('sidebar-collapsed')) {
+                // In collapsed mode, allow default link behavior (navigate to /transactions)
+                return;
+            }
+            // In expanded mode, toggle submenu and prevent navigation
+            e.preventDefault();
+            toggleSubmenu(el);
+        }
+
+        // ===== SUBMENU TOGGLE =====
+        function toggleSubmenu(button) {
+            const group = button.closest('.ginee-nav-group');
+            const submenu = group.querySelector('.ginee-submenu');
+            const chevron = button.querySelector('.ginee-chevron');
+
+            if (submenu) {
+                submenu.classList.toggle('open');
+            }
+            if (chevron) {
+                chevron.classList.toggle('rotated');
+            }
+        }
+
+        // Initialize open submenus chevron state
+        document.querySelectorAll('.ginee-submenu.open').forEach(submenu => {
+            const chevron = submenu.previousElementSibling?.querySelector('.ginee-chevron');
+            if (chevron) chevron.classList.add('rotated');
+        });
+
+        // ===== GLOBAL TIME UPDATE =====
+        function updateGlobalTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) timeEl.textContent = timeString;
+        }
+        updateGlobalTime();
+        setInterval(updateGlobalTime, 1000);
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- JavaScript Utilities -->
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/modal.js"></script>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+
+    <!-- FLOATING SUBMENU CONTAINER (For Collapsed Sidebar) -->
+    <div id="floating-submenu-container"></div>
+
+    <style>
+        /* Floating Submenu Styles */
+        #floating-submenu-container {
+            display: none;
+            position: fixed;
+            z-index: 1100;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            padding: 0.5rem;
+            min-width: 200px;
+            /* Animation */
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .dark #floating-submenu-container {
+            background: var(--gray-800);
+            border-color: var(--gray-700);
+        }
+
+        #floating-submenu-container.visible {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Clone Items Style */
+        #floating-submenu-container .ginee-submenu-item {
+            padding: 0.5rem 1rem;
+            display: block;
+            color: var(--gray-600);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            margin-bottom: 2px;
+            font-size: 0.875rem;
+        }
+
+        .dark #floating-submenu-container .ginee-submenu-item {
+            color: var(--gray-300);
+        }
+
+        #floating-submenu-container .ginee-submenu-item:hover {
+            background-color: var(--gray-100);
+            color: var(--primary-600);
+        }
+
+        .dark #floating-submenu-container .ginee-submenu-item:hover {
+            background-color: var(--gray-700);
+            color: var(--primary-400);
+        }
+
+        #floating-submenu-container .ginee-submenu-item.active {
+            background-color: var(--primary-50);
+            color: var(--primary-600);
+            font-weight: 500;
+        }
+
+        .dark #floating-submenu-container .ginee-submenu-item.active {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary-400);
+        }
+    </style>
+
+    <script>
+        // ===== FLOATING SUBMENU LOGIC =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const navGroups = document.querySelectorAll('.ginee-nav-group');
+            const floatingContainer = document.getElementById('floating-submenu-container');
+            let hideTimeout;
+
+            navGroups.forEach(group => {
+                group.addEventListener('mouseenter', (e) => {
+                    // Only active if sidebar is collapsed
+                    if (!document.body.classList.contains('sidebar-collapsed')) return;
+
+                    clearTimeout(hideTimeout);
+
+                    const submenu = group.querySelector('.ginee-submenu');
+                    if (!submenu) return;
+
+                    // Clone content
+                    floatingContainer.innerHTML = submenu.innerHTML;
+
+                    // Position needs to be calculated based on the trigger item
+                    const triggerItem = group.querySelector('.ginee-nav-item');
+                    const rect = triggerItem.getBoundingClientRect();
+
+                    floatingContainer.style.top = `${rect.top}px`;
+                    floatingContainer.style.left = `${rect.right + 10}px`; // 10px offset
+
+                    // Show container
+                    floatingContainer.classList.add('visible');
+                });
+
+                group.addEventListener('mouseleave', () => {
+                    if (!document.body.classList.contains('sidebar-collapsed')) return;
+
+                    // Small delay to allow moving to the floating container
+                    hideTimeout = setTimeout(() => {
+                        floatingContainer.classList.remove('visible');
+                    }, 200);
+                });
+            });
+
+            // Keep visible when hovering the floating container itself
+            floatingContainer.addEventListener('mouseenter', () => {
+                clearTimeout(hideTimeout);
+            });
+
+            floatingContainer.addEventListener('mouseleave', () => {
+                hideTimeout = setTimeout(() => {
+                    floatingContainer.classList.remove('visible');
+                }, 200);
+            });
+        });
+
+        // Make all date inputs open the calendar picker when clicked anywhere on the field
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input[type="date"], input[type="month"]').forEach(input => {
+                input.addEventListener('click', function (e) {
+                    try {
+                        if (typeof this.showPicker === 'function') {
+                            this.showPicker();
+                        }
+                    } catch (err) {
+                        // ignore if already showing or unsupported
+                    }
+                });
+            });
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

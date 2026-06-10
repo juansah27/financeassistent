@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Family Finance Assistant{% endblock %}
+
+{% block header_title %}Analytics{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+    <!-- Header & Filter -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
+                <i data-lucide="pie-chart" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Financial insights & trends</p>
+            </div>
+        </div>
+
+        <!-- Period Filter -->
+        <form id="filterForm" action="/analytics" method="get"
+            class="flex items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-1">
+            {% for p_key, p_label in [('1m', '1 Bulan'), ('3m', '3 Bulan'), ('6m', '6 Bulan'), ('1y', '1 Tahun'),
+            ('all', 'Semua')] %}
+            <button type="submit" name="period" value="{{ p_key }}"
+                class="px-4 py-2 rounded-md text-sm font-medium transition-all {{ 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' if period == p_key else 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                {{ p_label }}
+            </button>
+            {% endfor %}
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Total Expense -->
+        <div class="card-stat gradient-rose animate-fade-in">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="trending-down" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Total Pengeluaran ({{ period }})</p>
+            <h3 class="text-2xl font-bold text-white">Rp {{ "{:,.0f}".format(total_period_expense) }}</h3>
+            <p class="text-xs text-white/60 mt-1">Rata-rata: Rp {{ "{:,.0f}".format(avg_monthly) }}/bln</p>
+        </div>
+
+        <!-- Top Category -->
+        <div class="card-stat gradient-blue animate-fade-in" style="animation-delay: 0.1s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="tag" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Pengeluaran Terbesar</p>
+            <h3 class="text-xl font-bold text-white truncate">{{ top_category.category if top_category else '-' }}</h3>
+            <p class="text-xs text-white/60 mt-1">
+                {% if top_category %}
+                Rp {{ "{:,.0f}".format(top_category.total) }} ({{ "{:.1f}".format(top_category.percentage) }}%)
+                {% else %}
+                Belum ada data
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Net Savings (Last Month in View) -->
+        {% set last_month = monthly_summary[-1] if monthly_summary else None %}
+        <div class="card-stat gradient-emerald animate-fade-in" style="animation-delay: 0.15s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Net Cashflow (Bulan Ini)</p>
+            <h3 class="text-2xl font-bold text-white">
+                {% if last_month %}
+                {{ "+" if last_month.net >= 0 else "" }}Rp {{ "{:,.0f}".format(last_month.net) }}
+                {% else %}
+                -
+                {% endif %}
+            </h3>
+            <p class="text-xs text-white/60 mt-1">Income vs Expense</p>
+        </div>
+
+        <!-- Prediction -->
+        <div class="card-stat gradient-violet animate-fade-in" style="animation-delay: 0.2s;">
+            <div class="card-stat-icon bg-white/20">
+                <i data-lucide="activity" class="w-5 h-5 text-white"></i>
+            </div>
+            <p class="text-sm text-white/80 mb-1">Prediksi Bulan Depan</p>
+            <h3 class="text-2xl font-bold text-white">Rp {{ "{:,.0f}".format(prediction.predicted_total) }}</h3>
+            <p class="text-xs text-white/60 mt-1 flex items-center gap-1">
+                Trend:
+                <span class="{{ 'text-red-200' if prediction.trend > 0 else 'text-emerald-200' }}">
+                    {{ "{:+.1f}%".format(prediction.trend) }}
+                </span>
+                ({{ prediction.confidence }})
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Charts Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Income vs Expense Trend -->
+        <div class="card lg:col-span-2 animate-fade-in h-full flex flex-col" style="animation-delay: 0.3s;">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-none">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5 text-primary-500"></i>
+                    Arus Kas (Income vs Expense)
+                </h2>
+            </div>
+            <div class="p-6 flex-1 min-h-0">
+                <div class="relative w-full h-full min-h-[300px]">
+                    <canvas id="cashflowChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Distribution -->
+        <div class="card animate-fade-in" style="animation-delay: 0.4s;">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-primary-500"></i>
+                    Komposisi Pengeluaran
+                </h2>
+            </div>
+            <div class="p-6 flex flex-col items-center justify-center">
+                <div class="h-64 w-full relative">
+                    <canvas id="categoryChart"></canvas>
+                    <!-- Center Text Overlays -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="text-center">
+                            <span class="text-xs text-gray-500 block">Top</span>
+                            <span class="text-lg font-bold text-gray-900 dark:text-white">
+                                {{ "{:.0f}%".format(category_breakdown[0].percentage) if category_breakdown else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mini Legend -->
+                <div class="mt-6 w-full space-y-2">
+                    {% for cat in category_breakdown[:4] %}
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full"
+                                style="background-color: hsl({{ (loop.index0 * 137.5) % 360 }}, 70%, 50%)"></span>
+                            <span class="text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{{ cat.category
+                                }}</span>
+                        </div>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ "{:.1f}%".format(cat.percentage)
+                            }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Family Spending -->
+        <div class="card animate-fade-in" style="animation-delay: 0.5s;">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-primary-500"></i>
+                    Pengeluaran per Anggota
+                </h2>
+            </div>
+            <div class="p-6">
+                <canvas id="familyChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Detailed Breakdown List (Top 5) -->
+        <div class="card animate-fade-in" style="animation-delay: 0.6s;">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="list" class="w-5 h-5 text-primary-500"></i>
+                    Detail Kategori (Top 5)
+                </h2>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for cat in category_breakdown[:5] %}
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-gray-500">
+                            {{ loop.index }}
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ cat.category }}</p>
+                            <p class="text-xs text-gray-500">{{ cat.count }} Transaksi</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-900 dark:text-white">Rp {{ "{:,.0f}".format(cat.total) }}</p>
+                        <div class="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                            <div class="h-full bg-primary-500 rounded-full" style="width: {{ cat.percentage }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-8 text-center text-gray-500">Belum ada data</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Debugging Helper
+    function logDebug(msg, data) {
+        console.log(`[Analytics Debug] ${msg}`, data || '');
+    }
+
+    // Error Handler
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+        const errorMsg = `Error: ${msg} at line ${lineNo}:${columnNo}`;
+        console.error(errorMsg);
+        const container = document.getElementById('debug-error-container');
+        if (container) {
+            container.innerHTML += `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-2">${errorMsg}</div>`;
+            container.classList.remove('hidden');
+        }
+        return false;
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        logDebug('DOM Loaded');
+
+        // Check Chart.js
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded!');
+            const container = document.querySelector('.max-w-7xl');
+            if (container) {
+                const errDiv = document.createElement('div');
+                errDiv.className = "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4";
+                errDiv.innerHTML = "<strong>Error:</strong> Chart.js library failed to load. Please check your internet connection.";
+                container.insertBefore(errDiv, container.firstChild);
+            }
+            return;
+        }
+
+        try {
+            // Common Config
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563';
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+            // --- DATA INJECTION FROM SERVER ---
+            // Using tojson to pass full objects securely
+            const monthlySummary = {{ monthly_summary | tojson | safe
+        }};
+    const categoryBreakdown = {{ category_breakdown | tojson | safe }};
+    const memberSpending = {{ member_spending | tojson | safe }};
+
+    logDebug('Data Loaded', { monthlySummary, categoryBreakdown, memberSpending });
+
+    // --- 1. Cashflow Chart (Income vs Expense) ---
+    const ctxCashflowElement = document.getElementById('cashflowChart');
+    if (ctxCashflowElement) {
+        const ctxCashflow = ctxCashflowElement.getContext('2d');
+
+        const cashflowLabels = monthlySummary.map(m => `${m.month}/${m.year}`);
+        const incomeData = monthlySummary.map(m => m.income);
+        const expenseData = monthlySummary.map(m => m.expense);
+
+        new Chart(ctxCashflow, {
+            type: 'bar',
+            data: {
+                labels: cashflowLabels,
+                datasets: [
+                    {
+                        label: 'Pemasukan',
+                        data: incomeData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)', // Emerald
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    },
+                    {
+                        label: 'Pengeluaran',
+                        data: expenseData,
+                        backgroundColor: 'rgba(244, 63, 94, 0.7)', // Rose
+                        borderColor: 'rgba(244, 63, 94, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': Rp ' + context.raw.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: {
+                            callback: function (value) { return 'Rp ' + (value / 1000000).toFixed(1) + 'jt'; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    } else {
+        console.error('Canvas #cashflowChart not found');
+    }
+
+    // --- 2. Category Breakdown (Doughnut) ---
+    const ctxCategoryElement = document.getElementById('categoryChart');
+    if (ctxCategoryElement) {
+        const ctxCategory = ctxCategoryElement.getContext('2d');
+        const catColors = [
+            '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b',
+            '#6366f1', '#ef4444', '#14b8a6', '#f97316', '#84cc16'
+        ];
+
+        const catLabels = categoryBreakdown.map(c => c.category || 'Uncategorized');
+        const catData = categoryBreakdown.map(c => c.total);
+
+        new Chart(ctxCategory, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catData,
+                    backgroundColor: catColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const val = context.raw;
+                                const total = context.chart._metasets[context.datasetIndex].total;
+                                const pct = ((val / total) * 100).toFixed(1) + '%';
+                                return context.label + ': ' + pct + ' (Rp ' + val.toLocaleString('id-ID') + ')';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- 3. Family Member Spending (Horizontal Bar) ---
+    const ctxFamilyElement = document.getElementById('familyChart');
+    if (ctxFamilyElement) {
+        const ctxFamily = ctxFamilyElement.getContext('2d');
+
+        const memLabels = memberSpending.map(m => m.name || 'Unknown');
+        const memData = memberSpending.map(m => m.total);
+
+        new Chart(ctxFamily, {
+            type: 'bar',
+            indexAxis: 'y',
+            data: {
+                labels: memLabels,
+                datasets: [{
+                    label: 'Total Pengeluaran',
+                    data: memData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: {
+                            callback: function (value) { return 'Rp ' + (value / 1000).toLocaleString('id-ID') + 'k'; }
+                        }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+            
+        } catch (e) {
+        console.error('Chart Initialization Error:', e);
+        const container = document.querySelector('.max-w-7xl');
+        if (container) {
+            const errDiv = document.createElement('div');
+            errDiv.className = "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4";
+            errDiv.innerHTML = "<strong>Chart Error:</strong> " + e.message;
+            container.insertBefore(errDiv, container.firstChild);
+        }
+    }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{
+  "name": "finance-assistant",
+  "version": "1.0.0",
+  "description": "Family Finance Assistant Frontend",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./app/static/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}
+
+

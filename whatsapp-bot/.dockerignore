@@ -1,0 +1,9 @@
+node_modules
+auth
+auth_info
+.wwebjs_auth
+.wwebjs_cache
+*.log
+temp
+.env
+.DS_Store

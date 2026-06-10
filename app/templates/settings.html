@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Pengaturan - Family Finance Assistant{% endblock %}
+
+{% block header_title %}Pengaturan{% endblock %}
+
+{% block header_actions %}
+<div id="header-actions-categories" class="hidden">
+    <button onclick="showAddModal()" class="btn btn-primary btn-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Tambah Kategori</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+
+    <!-- Settings Tabs -->
+    <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-0 z-20">
+        <div class="border-b border-gray-200 dark:border-gray-700">
+            <nav class="flex overflow-x-auto no-scrollbar" aria-label="Tabs">
+                <button onclick="switchSettingsTab('general')"
+                    class="settings-tab-btn whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 ease-in-out border-primary-500 text-primary-600 dark:text-primary-400"
+                    id="tab-btn-general">
+                    Umum
+                </button>
+                <button onclick="switchSettingsTab('categories')"
+                    class="settings-tab-btn whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 ease-in-out border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    id="tab-btn-categories">
+                    Kategori & Keywords
+                </button>
+                <button onclick="switchSettingsTab('whatsapp')"
+                    class="settings-tab-btn whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 ease-in-out border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    id="tab-btn-whatsapp">
+                    WhatsApp Report
+                </button>
+                <button onclick="switchSettingsTab('notifications')"
+                    class="settings-tab-btn whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 ease-in-out border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 relative"
+                    id="tab-btn-notifications">
+                    Notifikasi
+                    {% if unread_notifications %}
+                    <span class="absolute top-3 right-2 w-2 h-2 rounded-full bg-red-500"></span>
+                    {% endif %}
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Tab Content: General -->
+    <div id="tab-content-general" class="settings-tab-content">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <!-- Appearance Section -->
+            <section class="space-y-6">
+                <!-- System Preferences -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Preferensi Sistem</h3>
+
+                    <form action="/settings/update" method="POST" class="space-y-4">
+                        <div>
+                            <label class="label">Mata Uang</label>
+                            <select name="currency"
+                                class="input w-full md:w-1/2 [color-scheme:light] dark:[color-scheme:dark]">
+                                <option value="IDR" selected>IDR - Rupiah Indonesia</option>
+                                <option value="USD">USD - US Dollar</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="label">Format Tanggal</label>
+                            <select name="date_format"
+                                class="input w-full md:w-1/2 [color-scheme:light] dark:[color-scheme:dark]">
+                                <option value="DD/MM/YYYY" selected>31/12/2024</option>
+                                <option value="YYYY-MM-DD">2024-12-31</option>
+                            </select>
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" class="btn btn-primary">
+                                Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <!-- WhatsApp Integration Card -->
+        <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in"
+            style="animation-delay: 0.1s;">
+            <div class="flex items-center gap-3 mb-6">
+                <div
+                    class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400">
+                    <i data-lucide="message-circle" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Integrasi WhatsApp</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Status koneksi bot asisten keuangan</p>
+                </div>
+                <div class="ml-auto">
+                    <span class="badge badge-success flex items-center gap-1.5">
+                        <span
+                            class="w-2 h-2 bg-green-400 dark:bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
+                        Terhubung
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-1">Testing Koneksi</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Kirim pesan tes ke nomor terdaftar</p>
+                    </div>
+                    <button onclick="testWhatsapp()" class="btn btn-secondary btn-sm">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Kirim Pesan Tes</span>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-medium text-gray-900 dark:text-white mb-3">Daftar Keyword Pintas</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span
+                        class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full border border-gray-200 dark:border-gray-600">Laporan</span>
+                    <span
+                        class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full border border-gray-200 dark:border-gray-600">Saldo</span>
+                    <span
+                        class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full border border-gray-200 dark:border-gray-600">Tagihan</span>
+                    <button
+                        class="px-3 py-1 border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        + Tambah Baru
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="mt-6 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30 p-6 animate-fade-in"
+            style="animation-delay: 0.2s;">
+            <h3 class="text-lg font-bold text-red-700 dark:text-red-400 mb-4">Danger Zone</h3>
+
+            <div class="flex flex-col gap-4">
+                <div
+                    class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-red-100 dark:border-red-900/30">
+                    <div>
+                        <p class="font-medium text-gray-900 dark:text-white">Reset Semua Data</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Menghapus semua transaksi dan kategori</p>
+                    </div>
+                    <button onclick="confirmReset()" class="btn btn-danger btn-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Reset Data</span>
+                    </button>
+                </div>
+
+                <div
+                    class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-red-100 dark:border-red-900/30">
+                    <div>
+                        <p class="font-medium text-gray-900 dark:text-white">Logout Akun</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Keluar dari sesi saat ini</p>
+                    </div>
+                    <a href="/logout"
+                        class="btn btn-secondary btn-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/30">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Categories -->
+    <div id="tab-content-categories" class="settings-tab-content hidden">
+        {% include "categories.html" %}
+    </div>
+
+    <!-- Tab Content: WhatsApp -->
+    <div id="tab-content-whatsapp" class="settings-tab-content hidden">
+        {% include "whatsapp_report_settings.html" %}
+    </div>
+
+    <!-- Tab Content: Notifications -->
+    <div id="tab-content-notifications" class="settings-tab-content hidden">
+        {% include "notifications.html" %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function switchSettingsTab(tabName) {
+        // Update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabName);
+        window.history.pushState({}, '', url);
+
+        // Update Tabs
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            if (btn.id === `tab-btn-${tabName}`) {
+                btn.classList.add('border-primary-500', 'text-primary-600', 'dark:text-primary-400');
+                btn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            } else {
+                btn.classList.remove('border-primary-500', 'text-primary-600', 'dark:text-primary-400');
+                btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            }
+        });
+
+        // Update Content
+        document.querySelectorAll('.settings-tab-content').forEach(content => {
+            if (content.id === `tab-content-${tabName}`) {
+                content.classList.remove('hidden');
+                content.classList.add('animate-fade-in');
+            } else {
+                content.classList.add('hidden');
+                content.classList.remove('animate-fade-in');
+            }
+        });
+
+        // Update Header Actions
+        document.querySelectorAll('[id^="header-actions-"]').forEach(el => el.classList.add('hidden'));
+        if (document.getElementById(`header-actions-${tabName}`)) {
+            document.getElementById(`header-actions-${tabName}`).classList.remove('hidden');
+        }
+    }
+
+    // Initialize from URL param
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab') || 'general';
+        switchSettingsTab(tab);
+    });
+
+    async function testWhatsapp() {
+        const btn = document.querySelector('button[onclick="testWhatsapp()"]');
+        const originalContent = btn.innerHTML;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Mengirim...</span>';
+            lucide.createIcons();
+
+            showToast('Sedang mengirim pesan tes...', 'info');
+
+            const res = await fetch('/api/whatsapp/report-schedule/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showToast('Pesan tes berhasil dikirim!', 'success');
+            } else {
+                console.error(data.error);
+                showToast(data.error || 'Gagal mengirim pesan tes', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Terjadi kesalahan koneksi', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            lucide.createIcons();
+        }
+    }
+
+    function confirmReset() {
+        if (confirm('APAKAH ANDA YAKIN? Tindakan ini tidak dapat dibatalkan. Semua data akan hilang selamanya.')) {
+            // Call API to reset
+            alert('Fitur ini dinonaktifkan untuk keamanan demo.');
+        }
+    }
+</script>
+{% endblock %}

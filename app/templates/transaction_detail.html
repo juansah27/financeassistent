@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Transaksi - Family Finance Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <!-- Back Button -->
+                <a href="/reports" class="btn btn-ghost btn-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                    <i data-lucide="receipt" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Detail Transaksi</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">ID: #{{ transaction.id }}</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <a href="/transaction/{{ transaction.id }}/edit" class="btn btn-primary btn-sm">
+                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    <span>Edit</span>
+                </a>
+                {% if not transaction.is_deleted %}
+                <form method="POST" action="/transaction/{{ transaction.id }}/delete" class="inline"
+                    onsubmit="return confirm('Hapus transaksi ini?')">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Hapus</span>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Transaction Card -->
+    <div class="card animate-fade-in mb-6">
+        <div class="p-6">
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex-1">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        {{ transaction.description or transaction.raw_input or "Transaksi" }}
+                    </h2>
+                    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        <span>{{ transaction.created_at | format_datetime_jakarta("%d %B %Y") }}</span>
+                        <span>•</span>
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span>{{ transaction.created_at | format_datetime_jakarta("%H:%M") }}</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span
+                        class="text-3xl font-bold {% if transaction.type.value == 'Pemasukan' %}text-success{% else %}text-danger{% endif %}">
+                        {% if transaction.type.value == 'Pemasukan' %}+{% else %}-{% endif %}Rp {{
+                        "{:,.0f}".format(transaction.amount) }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Tipe</p>
+                    <span
+                        class="badge {% if transaction.type.value == 'Pemasukan' %}badge-success{% else %}badge-danger{% endif %}">
+                        {{ transaction.type.value }}
+                    </span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Kategori</p>
+                    <span class="badge badge-neutral">{{ transaction.category }}</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Currency</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ transaction.currency_code or "IDR"
+                        }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                    <span class="badge {% if transaction.is_deleted %}badge-danger{% else %}badge-success{% endif %}">
+                        {% if transaction.is_deleted %}Dihapus{% else %}Aktif{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if transaction.notes %}
+            <div class="mt-6 p-4 bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500 rounded-r-lg">
+                <div class="flex items-start gap-2">
+                    <i data-lucide="message-square"
+                        class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-xs text-primary-700 dark:text-primary-300 font-semibold mb-1">Catatan:</p>
+                        <p class="text-sm text-gray-900 dark:text-white">{{ transaction.notes }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if transaction.raw_input and transaction.raw_input != transaction.description %}
+            <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Input Asli (AI):</p>
+                <p class="text-sm text-gray-700 dark:text-gray-300 font-mono">{{ transaction.raw_input }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Photos Card -->
+    <div class="card animate-fade-in mb-6" style="animation-delay: 0.1s;">
+        <div class="p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <i data-lucide="image" class="w-5 h-5 text-primary-500"></i>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Foto Bukti</h3>
+            </div>
+
+            <form method="POST" action="/transaction/{{ transaction.id }}/upload-photo" enctype="multipart/form-data"
+                class="mb-6">
+                <div class="flex gap-3">
+                    <input type="file" name="file" accept="image/*" required
+                        class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        <span>Upload</span>
+                    </button>
+                </div>
+            </form>
+
+            {% if photos %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {% for photo in photos %}
+                <div class="relative group">
+                    <img src="/{{ photo.file_path }}" alt="{{ photo.filename }}"
+                        class="w-full h-32 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+                        onclick="window.open('/{{ photo.file_path }}', '_blank')">
+                    <form method="POST" action="/transaction/{{ transaction.id }}/photo/{{ photo.id }}/delete"
+                        class="absolute top-2 right-2">
+                        <button type="submit"
+                            class="w-8 h-8 bg-danger rounded-full flex items-center justify-center text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            onclick="return confirm('Hapus foto ini?')">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i data-lucide="image-off" class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-2"></i>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Belum ada foto bukti</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Edit History Card -->
+    {% if edits %}
+    <div class="card animate-fade-in" style="animation-delay: 0.2s;">
+        <div class="p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <i data-lucide="history" class="w-5 h-5 text-primary-500"></i>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Riwayat Edit</h3>
+            </div>
+
+            <div class="space-y-4">
+                {% for edit in edits %}
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 gradient-primary rounded-full flex items-center justify-center">
+                            <i data-lucide="edit-3" class="w-5 h-5 text-white"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 border-l-2 border-primary-200 dark:border-primary-700 pl-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            {{ edit.created_at | format_datetime_jakarta("%d %b %Y, %H:%M") }}
+                        </p>
+                        <div class="space-y-1">
+                            {% if edit.old_amount != edit.new_amount %}
+                            <p class="text-sm text-gray-900 dark:text-white">
+                                <span class="font-semibold">Jumlah:</span>
+                                <span class="text-gray-500 dark:text-gray-400">Rp {{ "{:,.0f}".format(edit.old_amount)
+                                    }}</span>
+                                <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+                                <span class="font-semibold text-primary-600 dark:text-primary-400">Rp {{
+                                    "{:,.0f}".format(edit.new_amount) }}</span>
+                            </p>
+                            {% endif %}
+                            {% if edit.old_category != edit.new_category %}
+                            <p class="text-sm text-gray-900 dark:text-white">
+                                <span class="font-semibold">Kategori:</span>
+                                <span class="text-gray-500 dark:text-gray-400">{{ edit.old_category }}</span>
+                                <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+                                <span class="font-semibold text-primary-600 dark:text-primary-400">{{ edit.new_category
+                                    }}</span>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

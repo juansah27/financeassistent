@@ -1,0 +1,753 @@
+{% extends "base.html" %}
+
+{% block title %}Spending Trends & Predictions{% endblock %}
+
+{% block header_title %}Predictions{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+    <!-- Page Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Spending Trends & Predictions</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Analisis tren pengeluaran dan prediksi bulan depan
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Month Prediction Card -->
+    <div class="card-stat gradient-purple mb-8 animate-fade-in">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <i data-lucide="calendar" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Prediksi Bulan Depan</h2>
+                    <p class="text-white/80">{{ next_month.strftime('%B %Y') }}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-4xl font-bold text-white">
+                    Rp {{ "{:,.0f}".format(overall_prediction.predicted_total) }}
+                </div>
+                <div class="text-sm text-white/80 mt-1 flex items-center justify-end gap-1">
+                    <i data-lucide="gauge" class="w-4 h-4"></i>
+                    Confidence: <span class="font-semibold">{{ overall_prediction.confidence.upper() }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-white/20">
+            <div>
+                <div class="text-sm text-white/70 mb-1">Rata-rata Historis</div>
+                <div class="text-lg font-semibold text-white">Rp {{
+                    "{:,.0f}".format(overall_prediction.historical_average) }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-white/70 mb-1">Estimasi Transaksi</div>
+                <div class="text-lg font-semibold text-white">{{ overall_prediction.predicted_count }} transaksi</div>
+            </div>
+            <div>
+                <div class="text-sm text-white/70 mb-1">Trend</div>
+                <div class="text-lg font-semibold text-white flex items-center gap-1">
+                    {% if overall_prediction.trend > 0 %}
+                    <i data-lucide="arrow-up" class="w-5 h-5 text-red-200"></i> Naik
+                    {% elif overall_prediction.trend < 0 %} <i data-lucide="arrow-down" class="w-5 h-5 text-green-200">
+                        </i> Turun
+                        {% else %}
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i> Stabil
+                        {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Projection Breakdown -->
+    <div class="card animate-fade-in mb-8" style="animation-delay: 0.1s;">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="calculator" class="w-5 h-5 text-primary-500"></i>
+                Detail Proyeksi Bulan Depan
+            </h2>
+            <button onclick="document.getElementById('projectionModal').classList.remove('hidden')"
+                class="px-4 py-2 bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors flex items-center gap-2 text-sm shadow-sm">
+                <i data-lucide="list" class="w-4 h-4"></i> Lihat Detail Detail
+            </button>
+        </div>
+
+        {% if custom_projection.is_low_data %}
+        <div
+            class="mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+            <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+            <span>Data masih kurang dari 7 hari — proyeksi non-rutin menggunakan total aktual tanpa ekstrapolasi.</span>
+        </div>
+        {% elif custom_projection.is_limited_data %}
+        <div
+            class="mx-6 mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+            <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
+            <span><strong>Low Data</strong> — baru {{ custom_projection.days_active }} hari data, buffer diturunkan ke
+                {{ (custom_projection.buffer_percent * 100)|round(1) }}% (normal 10%).</span>
+        </div>
+        {% endif %}
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Recurring -->
+            <div class="p-4 bg-blue-50 dark:bg-gray-900 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                <div class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Rutin (Recurring)</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">
+                    Rp {{ "{:,.0f}".format(custom_projection.recurring_total) }}
+                </div>
+                <div class="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">
+                    Dikonversi per frekuensi × {{ custom_projection.days_next_month }} hari
+                </div>
+            </div>
+
+            <!-- Non-Recurring -->
+            <div
+                class="p-4 bg-purple-50 dark:bg-gray-900 rounded-lg border border-purple-100 dark:border-purple-900/50">
+                <div class="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">Non-Rutin (Estimasi)</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">
+                    Rp {{ "{:,.0f}".format(custom_projection.projected_non_recurring) }}
+                </div>
+                <div class="text-xs text-purple-600/70 dark:text-purple-400/70 mt-1">
+                    {% if custom_projection.is_low_data %}
+                    Total aktual (data &lt; 7 hari)
+                    {% else %}
+                    Avg: Rp {{ "{:,.0f}".format(custom_projection.avg_daily) }}/hari × {{
+                    custom_projection.days_next_month }} hari
+                    <br>Buffer {{ (custom_projection.buffer_percent * 100)|int }}%: +Rp {{
+                    "{:,.0f}".format(custom_projection.buffer_amount) }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Total -->
+            <div class="p-4 bg-green-50 dark:bg-gray-900 rounded-lg border border-green-100 dark:border-green-900/50">
+                <div class="text-sm text-green-600 dark:text-green-400 font-medium mb-1">Total Proyeksi</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                    Rp {{ "{:,.0f}".format(custom_projection.total_projection) }}
+                </div>
+                <div class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">
+                    Rutin + Non-Rutin
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Predictions -->
+    <div class="card animate-fade-in mb-8" style="animation-delay: 0.1s;">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="grid-3x3" class="w-5 h-5 text-primary-500"></i>
+                Prediksi per Kategori
+            </h2>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for cat_name, prediction in category_predictions.items() %}
+            <div class="p-5 border border-gray-200 dark:border-gray-700 rounded-lg hover-lift">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-gray-900 dark:text-white">{{ cat_name }}</h3>
+                    <span
+                        class="badge {% if prediction.confidence == 'high' %}badge-success{% elif prediction.confidence == 'medium' %}badge-warning{% else %}badge-danger{% endif %}">
+                        {{ prediction.confidence }}
+                    </span>
+                </div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                    Rp {{ "{:,.0f}".format(prediction.predicted_total) }}
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Avg: Rp {{ "{:,.0f}".format(prediction.historical_average) }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Spending Trends by Category -->
+    <div class="card animate-fade-in mb-8" style="animation-delay: 0.15s;">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-5 h-5 text-primary-500"></i>
+                Tren Pengeluaran per Kategori
+            </h2>
+        </div>
+        <div class="p-6">
+            <!-- Category Tabs -->
+            <div class="mb-6">
+                <div class="flex flex-wrap gap-2" id="categoryTabs">
+                    {% for cat_name, trend_data in category_trends.items() %}
+                    {% if trend_data|length > 0 %}
+                    <button data-tab-target="chart-{{ loop.index }}"
+                        class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 
+                        {% if loop.first %}bg-primary-500 text-white shadow-md{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600{% endif %}"
+                        onclick="switchCategoryTab(this, 'chart-{{ loop.index }}')">
+                        {{ cat_name }}
+                    </button>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Charts Container -->
+            <div
+                class="relative bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                {% for cat_name, trend_data in category_trends.items() %}
+                {% if trend_data|length > 0 %}
+                <div id="chart-{{ loop.index }}"
+                    class="category-chart-content {% if not loop.first %}hidden{% endif %} transition-opacity duration-300">
+                    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span class="w-2 h-8 rounded-full bg-primary-500"></span>
+                        {{ cat_name }}
+                    </h3>
+                    <div class="relative h-72 w-full">
+                        <canvas id="canvas-{{ loop.index }}"></canvas>
+                    </div>
+                    <script>
+                        (window.chartQueue = window.chartQueue || []).push({
+                            id: 'canvas-{{ loop.index }}',
+                            key: {{ cat_name | tojson }}
+                        });
+                    </script>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Empty State (if no categories have data) -->
+                {% set has_data = false %}
+                {% for cat_name, trend_data in category_trends.items() %}
+                {% if trend_data|length > 0 %}{% set has_data = true %}{% endif %}
+                {% endfor %}
+
+                {% if not has_data %}
+                <div class="text-center py-12 text-gray-400">
+                    <i data-lucide="bar-chart-2" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                    <p>Belum ada data tren untuk ditampilkan</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Day of Week Pattern -->
+    <div class="card animate-fade-in" style="animation-delay: 0.2s;">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="calendar-days" class="w-5 h-5 text-primary-500"></i>
+                Pola Pengeluaran per Hari
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="relative h-72 w-full mb-8">
+                <canvas id="dayOfWeekChart"></canvas>
+            </div>
+
+            <!-- Day Tabs -->
+            <div class="mb-6">
+                <div class="flex flex-wrap gap-2 justify-center" id="dayTabs">
+                    {% for day_data in day_of_week_pattern %}
+                    <button data-tab-target="day-{{ loop.index }}"
+                        class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 
+                        {% if loop.first %}bg-primary-500 text-white shadow-md{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600{% endif %}"
+                        onclick="switchDayTab(this, 'day-{{ loop.index }}')">
+                        {{ day_data.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Day Content -->
+            <div
+                class="relative bg-gray-50 dark:bg-gray-900 rounded-xl p-6 border border-gray-100 dark:border-gray-700 text-center transition-all duration-300">
+                {% for day_data in day_of_week_pattern %}
+                <div id="day-{{ loop.index }}"
+                    class="day-content {% if not loop.first %}hidden{% endif %} animate-fade-in">
+                    <div class="mb-2 text-lg font-bold text-gray-900 dark:text-white">{{ day_data.name }}</div>
+                    <div class="grid grid-cols-2 gap-8 max-w-lg mx-auto mt-6">
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Pengeluaran</div>
+                            <div class="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                                Rp {{ "{:,.0f}".format(day_data.total) }}
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Rata-rata</div>
+                            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                Rp {{ "{:,.0f}".format(day_data.average) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <span
+                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            Total Transaksi: {{ day_data.count }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Tab switching logic
+    function switchCategoryTab(btn, targetId) {
+        // Update tab styles
+        document.querySelectorAll('#categoryTabs button').forEach(b => {
+            b.className = "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600";
+        });
+        btn.className = "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-primary-500 text-white shadow-md transform scale-105";
+
+        // Show/Hide charts
+        document.querySelectorAll('.category-chart-content').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('animate-fade-in');
+        });
+
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('animate-fade-in');
+        }
+    }
+
+    function switchDayTab(btn, targetId) {
+        // Update tab styles
+        document.querySelectorAll('#dayTabs button').forEach(b => {
+            b.className = "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600";
+        });
+        btn.className = "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-primary-500 text-white shadow-md transform scale-105";
+
+        // Show/Hide charts
+        document.querySelectorAll('.day-content').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('animate-fade-in');
+        });
+
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('animate-fade-in');
+        }
+    }
+
+    // Chart colors
+    function getChartColors() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+            borderColor: isDark ? 'rgba(99, 102, 241, 1)' : 'rgba(99, 102, 241, 1)',
+            pointBackgroundColor: isDark ? 'rgba(99, 102, 241, 1)' : 'rgba(99, 102, 241, 1)',
+            textColor: isDark ? '#e5e7eb' : '#374151',
+            gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+        };
+    }
+
+    // Category trends charts
+    const chartData = {{ chart_data | safe}};
+
+    // Process the queue populated by the HTML loop
+    if (window.chartQueue && Array.isArray(window.chartQueue)) {
+        window.chartQueue.forEach(item => {
+            const data = chartData[item.key];
+            if (data && data.amounts.length > 0) {
+                const ctx = document.getElementById(item.id);
+                if (ctx) {
+                    const colors = getChartColors();
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: item.key,
+                                data: data.amounts,
+                                backgroundColor: colors.backgroundColor,
+                                borderColor: colors.borderColor,
+                                borderWidth: 3,
+                                pointBackgroundColor: colors.pointBackgroundColor,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        label: function (context) {
+                                            return 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                        }
+                                    },
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    padding: 10,
+                                    cornerRadius: 8
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: colors.textColor,
+                                        callback: function (value) {
+                                            return 'Rp ' + (value / 1000).toFixed(0) + 'k';
+                                        }
+                                    },
+                                    grid: {
+                                        color: colors.gridColor,
+                                        borderDash: [5, 5]
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: colors.textColor
+                                    },
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // Day of week chart
+    let dayOfWeekData = {{ day_of_week_json | safe}};
+    // Ensure data is array (handle potential string issues)
+    if (typeof dayOfWeekData === 'string') {
+        try {
+            dayOfWeekData = JSON.parse(dayOfWeekData);
+        } catch (e) {
+            console.error("Failed to parse day_of_week_json", e);
+            dayOfWeekData = [];
+        }
+    }
+
+    const dayCtx = document.getElementById('dayOfWeekChart');
+    if (dayCtx && Array.isArray(dayOfWeekData) && dayOfWeekData.length > 0) {
+        const colors = getChartColors();
+        const isDark = document.documentElement.classList.contains('dark');
+        new Chart(dayCtx, {
+            type: 'bar',
+            data: {
+                labels: dayOfWeekData.map(d => d.name),
+                datasets: [{
+                    label: 'Total Pengeluaran',
+                    data: dayOfWeekData.map(d => d.total),
+                    backgroundColor: dayOfWeekData.map((d, i) => {
+                        const hue = (i * 360 / 7) % 360;
+                        return isDark ? `hsla(${hue}, 70%, 50%, 0.7)` : `hsla(${hue}, 70%, 60%, 0.7)`;
+                    }),
+                    borderColor: dayOfWeekData.map((d, i) => {
+                        const hue = (i * 360 / 7) % 360;
+                        return `hsl(${hue}, 70%, 50%)`;
+                    }),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                const index = context.dataIndex;
+                                const day = dayOfWeekData[index];
+                                return [
+                                    'Total: Rp ' + day.total.toLocaleString('id-ID'),
+                                    'Rata-rata: Rp ' + day.average.toLocaleString('id-ID'),
+                                    'Jumlah: ' + day.count + ' transaksi'
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: colors.textColor,
+                            callback: function (value) {
+                                return 'Rp ' + (value / 1000).toFixed(0) + 'k';
+                            }
+                        },
+                        grid: {
+                            color: colors.gridColor
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: colors.textColor
+                        },
+                        grid: {
+                            color: colors.gridColor
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<!-- Projection Detail Modal (Moved outside layout constraints) -->
+<div id="projectionModal" class="relative hidden" style="z-index: 2000;" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+        onclick="document.getElementById('projectionModal').classList.add('hidden')"></div>
+
+    <div class="fixed inset-0 w-screen overflow-y-auto" style="z-index: 2010;"
+        onclick="document.getElementById('projectionModal').classList.add('hidden')">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-xl transition-all w-full max-w-4xl lg:max-w-5xl my-10 lg:my-14 text-left"
+                onclick="event.stopPropagation()">
+                <div
+                    class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 sticky top-0 z-20">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="modal-title">Detail Perhitungan
+                        Proyeksi</h3>
+                    <button onclick="document.getElementById('projectionModal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-500 focus:outline-none relative z-30">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <!-- Grid Wrapper for 2 Columns -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Rutin Info -->
+                        <div>
+                            <h4 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
+                                <i data-lucide="repeat" class="w-5 h-5"></i> Biaya Rutin (Recurring)
+                            </h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Dihitung dari transaksi rutin yang aktif, dikonversikan secara proporsional ke
+                                <strong>{{
+                                    custom_projection.days_next_month }} hari</strong> di bulan depan.
+                            </p>
+
+                            <div
+                                class="bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                                <table class="w-full text-sm text-left relative z-0">
+                                    <thead
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-3 font-medium">Nama/Kategori</th>
+                                            <th class="px-4 py-3 font-medium text-right">Proyeksi ({{
+                                                custom_projection.days_next_month }} hari)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {% for item in custom_projection.recurring_details %}
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">{{ item.name }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{
+                                                    item.recurrence_type|title }} - Rp {{
+                                                    "{:,.0f}".format(item.base_amount)
+                                                    }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                Rp {{
+                                                "{:,.0f}".format(item.projected_amount) }}</td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2"
+                                                class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                                                Tidak ada pengeluaran rutin aktif</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot
+                                        class="bg-blue-50 dark:bg-blue-900 font-bold border-t border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <td class="px-4 py-3 text-right text-blue-600 dark:text-blue-400">Total
+                                                Rutin
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-blue-700 dark:text-blue-300">Rp {{
+                                                "{:,.0f}".format(custom_projection.recurring_total) }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Non-Rutin Info -->
+                        <div>
+                            <h4
+                                class="text-lg font-bold text-purple-600 dark:text-purple-400 mb-3 flex items-center gap-2">
+                                <i data-lucide="shopping-cart" class="w-5 h-5"></i> Biaya Non-Rutin (Estimasi)
+                            </h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Estimasi berdasarkan riwayat pengeluaran yang tidak tetap menggunakan metode <em>window
+                                    rata-rata harian</em>.
+                            </p>
+
+                            <div
+                                class="bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                                <table class="w-full text-sm text-left relative z-0">
+                                    <thead
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-3 font-medium">Parameter / Metrik</th>
+                                            <th class="px-4 py-3 font-medium text-right">Nilai Estimasi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">Mulai Dari (Total
+                                                    Hari)</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{
+                                                    custom_projection.start_date.strftime('%d %b %Y') }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                {{ custom_projection.days_active }} hari aktif
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">Total Pengeluaran
+                                                    Historis</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Total histori
+                                                    tanpa pengeluaran rutin</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                Rp {{ "{:,.0f}".format(custom_projection.non_recurring_actual) }}
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">Rata-rata Harian
+                                                </div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Total dibagi {{
+                                                    custom_projection.days_active }} hari aktif</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                Rp {{ "{:,.0f}".format(custom_projection.avg_daily) }}<span
+                                                    class="text-xs font-normal text-gray-500 dark:text-gray-400">/hari</span>
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">Ekstrapolasi
+                                                    Proyeksi</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Rata-rata harian ×
+                                                    {{ custom_projection.days_next_month }} hari (Bulan Depan)</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                Rp {{ "{:,.0f}".format((custom_projection.avg_daily *
+                                                custom_projection.days_next_month)|round) }}
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-white dark:bg-gray-800">
+                                            <td class="px-4 py-3">
+                                                <div
+                                                    class="font-medium text-gray-900 dark:text-white flex items-center gap-1">
+                                                    Buffer Cadangan
+                                                    <span
+                                                        class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs">{{
+                                                        (custom_projection.buffer_percent * 100)|int }}%</span>
+                                                </div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                    {% if custom_projection.is_low_data %}
+                                                    Tanpa buffer (data &lt; 7 hari)
+                                                    {% elif custom_projection.is_limited_data %}
+                                                    Buffer disesuaikan (data terbatas)
+                                                    {% else %}
+                                                    Buffer standar untuk pengeluaran tak terduga
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                                + Rp {{ "{:,.0f}".format(custom_projection.buffer_amount) }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot
+                                        class="bg-blue-50 dark:bg-blue-900 font-bold border-t border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <td class="px-4 py-3 text-right text-blue-600 dark:text-blue-400">Total
+                                                Estimasi Non-Rutin</td>
+                                            <td class="px-4 py-3 text-right text-blue-700 dark:text-blue-300">
+                                                Rp {{ "{:,.0f}".format(custom_projection.projected_non_recurring) }}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <!-- Rincian Kategori Non-Rutin -->
+                            <div
+                                class="mt-4 bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                                <table class="w-full text-sm text-left relative z-0">
+                                    <thead
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-3 font-medium">Rincian Kategori Historis (Non-Rutin)</th>
+                                            <th class="px-4 py-3 font-medium text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {% for item in custom_projection.non_recurring_breakdown %}
+                                        <tr
+                                            class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white">{{ item.category
+                                                    }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                                Rp {{ "{:,.0f}".format(item.total) }}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2"
+                                                class="px-4 py-4 text-center text-gray-500 dark:text-gray-400 text-xs">
+                                                Belum ada data pengeluaran non-rutin
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-2xl flex justify-between items-center">
+                    <div class="text-gray-600 dark:text-gray-400 font-medium">Grand Total Prediksi</div>
+                    <div class="text-2xl font-black text-gray-900 dark:text-white">Rp {{
+                        "{:,.0f}".format(custom_projection.total_projection) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

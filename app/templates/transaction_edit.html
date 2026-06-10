@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Transaksi - Family Finance Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Back Button -->
+                <a href="/transaction/{{ transaction.id }}" class="btn btn-ghost btn-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                    <i data-lucide="edit-3" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Edit Transaksi</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Ubah detail transaksi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form Card -->
+    <div class="card animate-fade-in">
+        <div class="p-6">
+            <form method="POST" action="/transaction/{{ transaction.id }}/edit" class="space-y-6">
+                <!-- Amount Input -->
+                <div class="input-group">
+                    <input type="number" id="amount" name="amount" value="{{ transaction.amount }}" step="0.01" required
+                        class="input-floating peer" placeholder=" ">
+                    <label for="amount" class="label-floating">Jumlah (Rp)</label>
+                    <div class="input-icon">
+                        <i data-lucide="banknote" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Category Select -->
+                <div class="input-group">
+                    <select id="category" name="category" required class="input-floating peer">
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if transaction.category==cat %}selected{% endif %}>{{ cat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label for="category" class="label-floating">Kategori</label>
+                    <div class="input-icon">
+                        <i data-lucide="tag" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Description Input -->
+                <div class="input-group">
+                    <input type="text" id="description" name="description" value="{{ transaction.description or '' }}"
+                        class="input-floating peer" placeholder=" ">
+                    <label for="description" class="label-floating">Deskripsi</label>
+                    <div class="input-icon">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Notes Textarea -->
+                <div class="input-group">
+                    <textarea id="notes" name="notes" rows="4" class="input-floating peer resize-none"
+                        placeholder=" ">{{ transaction.notes or '' }}</textarea>
+                    <label for="notes" class="label-floating">Catatan (opsional)</label>
+                    <div class="input-icon" style="top: 1rem;">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button type="submit" class="btn btn-primary flex-1">
+                        <i data-lucide="check" class="w-5 h-5"></i>
+                        <span>Simpan Perubahan</span>
+                    </button>
+                    <a href="/transaction/{{ transaction.id }}" class="btn btn-secondary">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                        <span>Batal</span>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Info Card -->
+    <div class="card mt-6 animate-fade-in" style="animation-delay: 0.1s;">
+        <div class="p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <i data-lucide="info" class="w-5 h-5 text-primary-500"></i>
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">Info Transaksi</h3>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">ID Transaksi</span>
+                    <span class="font-mono text-gray-900 dark:text-white">#{{ transaction.id }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Tipe</span>
+                    <span
+                        class="badge {% if transaction.type.value == 'Pemasukan' %}badge-success{% else %}badge-danger{% endif %}">
+                        {{ transaction.type.value }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Dibuat</span>
+                    <span class="text-gray-900 dark:text-white">{{ transaction.created_at | format_datetime_jakarta("%d
+                        %b %Y, %H:%M") }}</span>
+                </div>
+                {% if transaction.raw_input %}
+                <div class="flex justify-between items-start">
+                    <span class="text-gray-600 dark:text-gray-400">Input Asli</span>
+                    <span class="text-gray-900 dark:text-white text-right max-w-xs">{{ transaction.raw_input }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

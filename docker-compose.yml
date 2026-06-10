@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: finance_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-finance_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-finance_pass}
+      POSTGRES_DB: ${DB_NAME:-finance_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-finance_user} -d ${DB_NAME:-finance_db}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: finance_web
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-finance_user}:${DB_PASSWORD:-finance_pass}@db:5432/${DB_NAME:-finance_db}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CLOUD_API_KEY=${GOOGLE_CLOUD_API_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY:-helloworld}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-your-webhook-secret-change-this}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  whatsapp-bot:
+    build: ./whatsapp-bot
+    container_name: finance_whatsapp_bot
+    volumes:
+      - whatsapp_auth:/app/auth
+      - ./whatsapp-bot:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://web:8000
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-your-webhook-secret-change-this}
+      - ALLOWED_GROUPS=${ALLOWED_GROUPS:-}
+      - MESSAGE_PREFIX=${MESSAGE_PREFIX:-}
+      - MIN_CONFIDENCE=${MIN_CONFIDENCE:-60}
+      - BOT_API_PORT=3000
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  whatsapp_auth:
+

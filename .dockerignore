@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+*.pyc
+__pycache__
+venv
+app/venv
+.env
+*.md
+.DS_Store
+whatsapp-bot/.wwebjs_auth
+whatsapp-bot/.wwebjs_cache
+whatsapp-bot/node_modules
+whatsapp-bot/auth_info

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan Lanjutan - Family Finance Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <!-- Back Button -->
+                <a href="/reports" class="btn btn-ghost btn-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+                    <i data-lucide="file-text" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Laporan Lanjutan</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Ringkasan tahunan tahun {{ year }}</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <a href="/reports/pdf?year={{ year }}" class="btn btn-primary btn-sm" target="_blank">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Export PDF</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yearly Summary Card -->
+    <div class="card animate-fade-in mb-6">
+        <div class="p-6">
+            <div class="flex items-center gap-2 mb-6">
+                <i data-lucide="calendar" class="w-5 h-5 text-primary-500"></i>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Ringkasan Bulanan {{ year }}</h2>
+            </div>
+
+            <!-- Monthly Stats Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b-2 border-gray-200 dark:border-gray-700">
+                            <th class="px-4 py-3 text-left font-bold text-gray-900 dark:text-white">Bulan</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">Pemasukan</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">Pengeluaran</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set ns = namespace(total_income=0, total_expenses=0) %}
+                        {% for month in range(1, 13) %}
+                        {% set stats = yearly_stats[month] %}
+                        {% set ns.total_income = ns.total_income + stats.income %}
+                        {% set ns.total_expenses = ns.total_expenses + stats.expenses %}
+                        <tr
+                            class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                {{ ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
+                                'September', 'Oktober', 'November', 'Desember'][month - 1] }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-success font-semibold">
+                                Rp {{ "{:,.0f}".format(stats.income) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-danger font-semibold">
+                                Rp {{ "{:,.0f}".format(stats.expenses) }}
+                            </td>
+                            <td
+                                class="px-4 py-3 text-right font-semibold {% if stats.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Rp {{ "{:,.0f}".format(stats.balance) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr
+                            class="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 font-bold">
+                            <td class="px-4 py-4 text-gray-900 dark:text-white">TOTAL</td>
+                            <td class="px-4 py-4 text-right text-success">Rp {{ "{:,.0f}".format(ns.total_income) }}
+                            </td>
+                            <td class="px-4 py-4 text-right text-danger">Rp {{ "{:,.0f}".format(ns.total_expenses) }}
+                            </td>
+                            <td
+                                class="px-4 py-4 text-right {% if (ns.total_income - ns.total_expenses) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Rp {{ "{:,.0f}".format(ns.total_income - ns.total_expenses) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="card animate-fade-in" style="animation-delay: 0.1s;">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-success"></i>
+                    <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400">Total Pemasukan</h3>
+                </div>
+                <p class="text-2xl font-bold text-success">Rp {{ "{:,.0f}".format(ns.total_income) }}</p>
+            </div>
+        </div>
+
+        <div class="card animate-fade-in" style="animation-delay: 0.2s;">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="trending-down" class="w-5 h-5 text-danger"></i>
+                    <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400">Total Pengeluaran</h3>
+                </div>
+                <p class="text-2xl font-bold text-danger">Rp {{ "{:,.0f}".format(ns.total_expenses) }}</p>
+            </div>
+        </div>
+
+        <div class="card animate-fade-in" style="animation-delay: 0.3s;">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="wallet" class="w-5 h-5 text-primary-500"></i>
+                    <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400">Saldo Bersih</h3>
+                </div>
+                <p
+                    class="text-2xl font-bold {% if (ns.total_income - ns.total_expenses) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    Rp {{ "{:,.0f}".format(ns.total_income - ns.total_expenses) }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="card animate-fade-in" style="animation-delay: 0.4s;">
+        <div class="p-6">
+            <div class="flex items-start gap-3">
+                <i data-lucide="info" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <h3 class="font-bold text-gray-900 dark:text-white mb-2">Tentang Laporan</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Laporan ini menampilkan ringkasan keuangan bulanan untuk tahun {{ year }}.
+                        Anda dapat mengekspor laporan ini ke format PDF dengan mengklik tombol "Export PDF" di atas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

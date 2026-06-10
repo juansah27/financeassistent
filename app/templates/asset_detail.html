@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}{{ asset.name }} - Detail Aset{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="/assets" class="btn btn-ghost btn-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Kembali ke Aset</span>
+        </a>
+    </div>
+
+    <!-- Asset Info Card -->
+    <div class="card mb-6 animate-fade-in">
+        <div class="p-6">
+            <div class="flex justify-between items-start gap-4 mb-4">
+                <div class="flex gap-4 flex-1">
+                    {% set icon_map = {
+                    'BPJS Ketenagakerjaan': 'shield',
+                    'Emas': 'gem',
+                    'Properti': 'home',
+                    'Kendaraan': 'car',
+                    'Deposito': 'piggy-bank',
+                    'Saham/Reksadana': 'trending-up',
+                    'Cryptocurrency': 'bitcoin',
+                    'Lain-lain': 'briefcase'
+                    } %}
+                    <div class="w-16 h-16 gradient-primary rounded-xl flex items-center justify-center">
+                        <i data-lucide="{{ icon_map.get(asset.asset_type.value, 'briefcase') }}"
+                            class="w-8 h-8 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <span class="badge badge-neutral mb-2">{{ asset.asset_type.value }}</span>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ asset.name }}</h1>
+                        <p class="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-2">
+                            Rp {{ "{:,.0f}".format(asset.current_value) }}
+                        </p>
+                    </div>
+                </div>
+                <button onclick="showEditModal()" class="btn btn-secondary">
+                    <i data-lucide="edit" class="w-4 h-4"></i>
+                    <span>Edit</span>
+                </button>
+            </div>
+
+            <!-- Asset Details -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                {% if asset.acquisition_date %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Tanggal Akuisisi</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ asset.acquisition_date | format_datetime_jakarta("%d/%m/%Y") }}
+                    </p>
+                </div>
+                {% endif %}
+                {% if asset.acquisition_value %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Nilai Beli</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Rp {{ "{:,.0f}".format(asset.acquisition_value) }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Pertumbuhan</p>
+                    <p
+                        class="text-lg font-semibold {% if growth_amount >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                        {% if growth_amount >= 0 %}+{% endif %}Rp {{ "{:,.0f}".format(growth_amount) }} ({{
+                        "{:.1f}".format(growth_percentage) }}%)
+                    </p>
+                </div>
+                {% endif %}
+                {% if asset.quantity and asset.unit %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Jumlah</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ asset.quantity }} {{ asset.unit }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if asset.notes %}
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Catatan:</p>
+                <p class="text-gray-900 dark:text-white">{{ asset.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Gold Price Card (Only for Gold Assets) -->
+    {% if asset.asset_type.value == 'Emas' %}
+    <div class="card mb-6 animate-fade-in" style="animation-delay: 0.025s;">
+        <div class="p-6">
+            <div class="flex justify-between items-center">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="gem" class="w-5 h-5 text-yellow-600 dark:text-yellow-400"></i>
+                        <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Harga Emas Hari Ini</p>
+                    </div>
+                    <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400" id="gold-price-display">
+                        <span class="loading-spinner inline-block w-6 h-6"></span>
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Per gram • <span
+                            id="gold-price-time"></span></p>
+                    {% if asset.quantity %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        Estimasi nilai: <span id="estimated-value" class="font-semibold">-</span>
+                    </p>
+                    {% endif %}
+                </div>
+                <form method="POST" action="/assets/{{ asset.id }}/update-gold-price" id="update-gold-form">
+                    <button type="submit" class="btn btn-warning" id="update-gold-btn">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span>Update Harga</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Update Value Card -->
+    <div class="card mb-6 animate-fade-in" style="animation-delay: 0.05s;">
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-5 h-5 text-primary-500"></i>
+                Update Nilai Aset
+            </h2>
+            <form method="POST" action="/assets/{{ asset.id }}/update-value" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <input type="number" id="new_value" name="new_value" required step="0.01"
+                            value="{{ asset.current_value }}" class="input-floating peer" placeholder=" ">
+                        <label for="new_value" class="label-floating">Nilai Baru (Rp)</label>
+                        <div class="input-icon">
+                            <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="notes" name="notes" class="input-floating peer" placeholder=" ">
+                        <label for="notes" class="label-floating">Catatan (Opsional)</label>
+                        <div class="input-icon">
+                            <i data-lucide="message-square" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Update Nilai</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Value History -->
+    {% if history and history|length > 0 %}
+    <div class="card animate-fade-in" style="animation-delay: 0.1s;">
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-5 h-5 text-primary-500"></i>
+                Riwayat Perubahan Nilai
+            </h2>
+
+            <!-- Chart Canvas -->
+            <div class="mb-6">
+                <canvas id="valueChart" height="80"></canvas>
+            </div>
+
+            <!-- History List -->
+            <div class="space-y-3">
+                {% for item in history %}
+                <div class="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                            Rp {{ "{:,.0f}".format(item.old_value) }} → Rp {{ "{:,.0f}".format(item.new_value) }}
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ item.created_at | format_datetime_jakarta("%d/%m/%Y %H:%M") }}
+                            {% if item.notes %} • {{ item.notes }}{% endif %}
+                        </p>
+                    </div>
+                    <span
+                        class="text-sm font-semibold {% if item.new_value >= item.old_value %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                        {% set diff = item.new_value - item.old_value %}
+                        {% if diff >= 0 %}+{% endif %}{{ "{:.1f}".format((diff / item.old_value * 100) if item.old_value
+                        > 0 else 0) }}%
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Modal -->
+<div id="editAssetModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit Aset</h2>
+            <form method="POST" action="/assets/{{ asset.id }}/edit" class="space-y-4">
+                <input type="hidden" name="asset_type" value="{{ asset.asset_type.name }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="input-group md:col-span-2">
+                        <input type="text" name="name" required value="{{ asset.name }}" class="input-floating peer"
+                            placeholder=" ">
+                        <label class="label-floating">Nama Aset</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" name="current_value" required step="0.01" value="{{ asset.current_value }}"
+                            class="input-floating peer" placeholder=" ">
+                        <label class="label-floating">Nilai Saat Ini (Rp)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="date" name="acquisition_date"
+                            value="{{ asset.acquisition_date.strftime('%Y-%m-%d') if asset.acquisition_date else '' }}"
+                            class="input-floating peer" placeholder=" ">
+                        <label class="label-floating">Tanggal Akuisisi</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" name="acquisition_value" step="0.01"
+                            value="{{ asset.acquisition_value if asset.acquisition_value else '' }}"
+                            class="input-floating peer" placeholder=" ">
+                        <label class="label-floating">Nilai Beli</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" name="quantity" step="0.01"
+                            value="{{ asset.quantity if asset.quantity else '' }}" class="input-floating peer"
+                            placeholder=" ">
+                        <label class="label-floating">Jumlah</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" name="unit" value="{{ asset.unit if asset.unit else '' }}"
+                            class="input-floating peer" placeholder=" ">
+                        <label class="label-floating">Satuan</label>
+                    </div>
+                    <div class="input-group md:col-span-2">
+                        <textarea name="notes" rows="3" class="input-floating peer"
+                            placeholder=" ">{{ asset.notes if asset.notes else '' }}</textarea>
+                        <label class="label-floating">Catatan</label>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="hideEditModal()" class="btn btn-secondary flex-1">Batal</button>
+                    <button type="submit" class="btn btn-primary flex-1"><i data-lucide="check" class="w-4 h-4"></i>
+                        Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showEditModal() {
+        document.getElementById('editAssetModal').classList.remove('hidden');
+    }
+    function hideEditModal() {
+        document.getElementById('editAssetModal').classList.add('hidden');
+    }
+
+    // Gold Price Functions
+    {% if asset.asset_type.value == 'Emas' %}
+    async function fetchGoldPrice() {
+        try {
+            const response = await fetch('/api/gold-price/current');
+            const data = await response.json();
+
+            if (data.success) {
+                const price = data.price_per_gram;
+                const priceDisplay = document.getElementById('gold-price-display');
+                const timeDisplay = document.getElementById('gold-price-time');
+
+                priceDisplay.textContent = 'Rp ' + price.toLocaleString('id-ID');
+                timeDisplay.textContent = 'Updated';
+
+                // Calculate estimated value if quantity exists
+                {% if asset.quantity %}
+                const quantity = {{ asset.quantity }
+            };
+            const estimatedValue = price * quantity;
+            document.getElementById('estimated-value').textContent =
+                'Rp ' + estimatedValue.toLocaleString('id-ID');
+            {% endif %}
+        } else {
+            document.getElementById('gold-price-display').textContent = 'Error';
+            document.getElementById('gold-price-time').textContent = 'Failed to fetch';
+        }
+    } catch (error) {
+        console.error('Error fetching gold price:', error);
+        document.getElementById('gold-price-display').textContent = 'Error';
+    }
+    }
+
+    // Fetch price on page load
+    fetchGoldPrice();
+
+    // Add loading state to update button
+    document.getElementById('update-gold-form').addEventListener('submit', function (e) {
+        const btn = document.getElementById('update-gold-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner inline-block w-4 h-4"></span> <span>Updating...</span>';
+    });
+    {% endif %}
+
+    // Chart
+    {% if history and history | length > 0 %}
+    const ctx = document.getElementById('valueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for item in history | reverse %}
+                '{{ item.created_at | format_datetime_jakarta("%d/%m") }}',
+                {% endfor %}
+        'Sekarang'
+            ],
+        datasets: [{
+            label: 'Nilai Aset (Rp)',
+            data: [
+                {% for item in history | reverse %}
+                    {{ item.old_value }},
+        {% endfor %}
+        {{ asset.current_value }}
+    ],
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        tension: 0.4,
+        fill: true
+            }]
+        },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: false }
+        }
+    }
+    });
+    {% endif %}
+</script>
+{% endblock %}

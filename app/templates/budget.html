@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block title %}Budget - Family Finance Assistant{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Glassmorphism Effects */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .dark .glass-card {
+        background: rgba(31, 41, 55, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Premium Stats Card */
+    .stats-card {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    }
+
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .stats-card:hover::before {
+        opacity: 1;
+    }
+
+    /* Enhanced Progress Bar */
+    .progress-enhanced {
+        height: 12px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .dark .progress-enhanced {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-bar-enhanced {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .progress-bar-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        to {
+            left: 100%;
+        }
+    }
+
+    .progress-bar-success {
+        background: linear-gradient(90deg, #10b981, #14b8a6);
+    }
+
+    .progress-bar-warning {
+        background: linear-gradient(90deg, #f59e0b, #fb923c);
+    }
+
+    .progress-bar-danger {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Budget Card */
+    .budget-card {
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .budget-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .budget-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .budget-card:hover::before {
+        opacity: 1;
+    }
+
+    /* Toggle Segmented Control */
+    .segmented-control {
+        display: inline-flex;
+        background: #f3f4f6;
+        border-radius: 10px;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .dark .segmented-control {
+        background: #374151;
+    }
+
+    .segmented-control input[type="radio"] {
+        display: none;
+    }
+
+    .segmented-control label {
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .segmented-control input[type="radio"]:checked+label {
+        background: white;
+        color: #6366f1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .dark .segmented-control input[type="radio"]:checked+label {
+        background: #1f2937;
+        color: #818cf8;
+    }
+
+    /* Toast Notification */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 9999;
+        animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 300px;
+    }
+
+    .dark .toast {
+        background: #1f2937;
+        color: white;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}Budget Bulanan - {{ month }}/{{ year }}{% endblock %}
+
+{% block header_actions %}{% endblock %}
+
+{% block content %}
+<div class="layout-stack">
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Month Navigation -->
+    <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-4">
+            <a href="/budget?year={{ prev_year }}&month={{ prev_month }}" class="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Bulan Sebelumnya">
+                <i data-lucide="chevron-left" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+            </a>
+            <div class="text-center">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    {{ month }}/{{ year }}
+                </h2>
+                {% if is_current %}
+                <span class="text-[10px] uppercase tracking-wider font-bold text-primary-500">Bulan Sekarang</span>
+                {% else %}
+                <a href="/budget" class="text-[10px] uppercase tracking-wider font-bold text-gray-400 hover:text-primary-500 transition-colors">Kembali ke Sekarang</a>
+                {% endif %}
+            </div>
+            <a href="/budget?year={{ next_year }}&month={{ next_month }}" class="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Bulan Berikutnya">
+                <i data-lucide="chevron-right" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+            </a>
+        </div>
+        
+        <div class="hidden sm:block">
+             <button onclick="exportBudget()" class="btn btn-secondary btn-sm">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Copy from Previous Month Alert -->
+    {% if has_prev_budgets and total_budget == 0 %}
+    <div class="card glass-card p-4 border-l-4 border-amber-500 animate-bounce-subtle">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-inner">
+                    <i data-lucide="copy" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 dark:text-white">Salin Anggaran Bulan Lalu?</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Gunakan data dari periode {{ prev_month }}/{{ prev_year }} untuk memulai bulan ini.</p>
+                </div>
+            </div>
+            <form method="POST" action="/budget/copy" class="w-full sm:w-auto">
+                <input type="hidden" name="from_year" value="{{ prev_year }}">
+                <input type="hidden" name="from_month" value="{{ prev_month }}">
+                <input type="hidden" name="to_year" value="{{ year }}">
+                <input type="hidden" name="to_month" value="{{ month }}">
+                <button type="submit" class="btn btn-primary w-full shadow-lg shadow-primary-500/20">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Salin Sekarang
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Summary Statistics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {% set total_spent = budgets | sum(attribute='actual') | default(0) %}
+        {% set total_remaining = total_budget - total_spent %}
+        {% set overall_percentage = (total_spent / total_budget * 100) if total_budget > 0 else 0 %}
+
+        <div class="stats-card card glass-card animate-fade-in"
+            style="animation-delay: 0.05s; --gradient-start: #6366f1; --gradient-end: #8b5cf6;">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+                        <i data-lucide="wallet" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Anggaran</p>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            Rp {{ "{:,.0f}".format(total_budget) }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card card glass-card animate-fade-in"
+            style="animation-delay: 0.1s; --gradient-start: #ec4899; --gradient-end: #ef4444;">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center shadow-lg">
+                        <i data-lucide="trending-down" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Terpakai</p>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            Rp {{ "{:,.0f}".format(total_spent) }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card card glass-card animate-fade-in"
+            style="animation-delay: 0.15s; --gradient-start: {% if total_remaining >= 0 %}#10b981{% else %}#ef4444{% endif %}; --gradient-end: {% if total_remaining >= 0 %}#14b8a6{% else %}#dc2626{% endif %};">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br {% if total_remaining >= 0 %}from-green-500 to-teal-500{% else %}from-red-500 to-red-600{% endif %} flex items-center justify-center shadow-lg">
+                        <i data-lucide="{% if total_remaining >= 0 %}check-circle{% else %}alert-circle{% endif %}"
+                            class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Sisa Anggaran</p>
+                        <h3
+                            class="text-2xl font-bold {% if total_remaining >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            Rp {{ "{:,.0f}".format(total_remaining if total_remaining >= 0 else -total_remaining) }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card card glass-card animate-fade-in"
+            style="animation-delay: 0.2s; --gradient-start: {% if overall_percentage < 80 %}#10b981{% elif overall_percentage < 100 %}#f59e0b{% else %}#ef4444{% endif %}; --gradient-end: {% if overall_percentage < 80 %}#14b8a6{% elif overall_percentage < 100 %}#fb923c{% else %}#dc2626{% endif %};">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br {% if overall_percentage < 80 %}from-green-500 to-teal-500{% elif overall_percentage < 100 %}from-amber-500 to-orange-500{% else %}from-red-500 to-red-600{% endif %} flex items-center justify-center shadow-lg">
+                        <i data-lucide="{% if overall_percentage < 80 %}trending-up{% elif overall_percentage < 100 %}alert-triangle{% else %}x-circle{% endif %}"
+                            class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Persentase Terpakai</p>
+                        <h3
+                            class="text-2xl font-bold {% if overall_percentage < 80 %}text-success{% elif overall_percentage < 100 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ "{:.1f}".format(overall_percentage) }}%
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid: Form + Chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Add Budget Form -->
+        <div class="lg:col-span-2 card glass-card animate-fade-in border-l-4 border-primary-500"
+            style="animation-delay: 0.25s;">
+            <div class="p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Tambah/Edit Anggaran</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Atur anggaran untuk kategori tertentu</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="/budget" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <select id="category" name="category" required class="input-floating peer">
+                                {% for cat in categories %}
+                                <option value="{{ cat.name }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="category" class="label-floating">Kategori</label>
+                            <div class="input-icon">
+                                <i data-lucide="tag" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <!-- Segmented Control Toggle -->
+                            <div class="segmented-control w-full">
+                                <input type="radio" name="budget_type" value="nominal" id="type_nominal" checked
+                                    onchange="toggleBudgetType(this.value)">
+                                <label for="type_nominal">Nominal (Rp)</label>
+
+                                <input type="radio" name="budget_type" value="percentage" id="type_percentage"
+                                    onchange="toggleBudgetType(this.value)">
+                                <label for="type_percentage">Persentase (%)</label>
+                            </div>
+
+                            <div class="input-group">
+                                <input type="number" id="amount" name="amount" required step="0.01"
+                                    class="input-floating peer" placeholder=" ">
+                                <label for="amount" id="amount_label" class="label-floating">Jumlah Anggaran
+                                    (Rp)</label>
+                                <div class="input-icon">
+                                    <i id="amount_icon" data-lucide="banknote" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <input type="hidden" name="is_percentage" id="is_percentage" value="false">
+                            <p id="helper_text" class="text-xs text-gray-500 hidden">
+                                Dari total pemasukan bulan ini: Rp {{ "{:,.0f}".format(total_income) }}
+                            </p>
+                        </div>
+                    </div>
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <button type="submit" class="btn btn-primary w-full">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>Simpan Anggaran</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Budget Allocation Chart -->
+        {% if budgets|length > 0 %}
+        <div class="card glass-card animate-fade-in" style="animation-delay: 0.3s;">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-primary-500"></i>
+                    Alokasi Anggaran
+                </h3>
+                <div style="height: 250px;">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Budget Grid -->
+    <div class="card glass-card animate-fade-in" style="animation-delay: 0.35s;">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-5 h-5 text-primary-500"></i>
+                Anggaran vs Terpakai
+            </h2>
+        </div>
+        <div class="p-6">
+            {% if budgets|length > 0 %}
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for item in budgets %}
+                <div class="budget-card glass-card p-6 md:p-8 rounded-xl border {% if item.is_over %}border-red-200 dark:border-red-800{% elif item.percentage >= 80 %}border-amber-200 dark:border-amber-800{% else %}border-green-200 dark:border-green-800{% endif %}"
+                    style="--accent-start: {% if item.is_over %}#ef4444{% elif item.percentage >= 80 %}#f59e0b{% else %}#10b981{% endif %}; --accent-end: {% if item.is_over %}#dc2626{% elif item.percentage >= 80 %}#fb923c{% else %}#14b8a6{% endif %};">
+
+                    <!-- Header with Icon & Category -->
+                    <div class="text-center mb-4">
+                        <div
+                            class="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br {% if item.is_over %}from-red-500 to-red-600{% elif item.percentage >= 80 %}from-amber-500 to-orange-500{% else %}from-green-500 to-teal-500{% endif %} flex items-center justify-center shadow-lg mb-3">
+                            <i data-lucide="{% if item.is_over %}alert-circle{% elif item.percentage >= 80 %}alert-triangle{% else %}check-circle{% endif %}"
+                                class="w-8 h-8 text-white"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-white text-lg mb-1">{{ item.category }}</h3>
+                        {% if item.percentage_budget %}
+                        <span
+                            class="inline-block px-2 py-1 rounded-lg text-xs font-medium {% if item.is_over %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% elif item.percentage >= 80 %}bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200{% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
+                            Target: {{ "{:.1f}".format(item.percentage_budget) }}% dari Total
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Percentage Circle -->
+                    <div class="text-center mb-4">
+                        <span
+                            class="text-4xl font-bold {% if item.is_over %}text-danger{% elif item.percentage >= 80 %}text-warning{% else %}text-success{% endif %}">
+                            {{ "{:.0f}".format(item.percentage) }}%
+                        </span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-enhanced mb-4">
+                        <div class="progress-bar-enhanced {% if item.is_over %}progress-bar-danger{% elif item.percentage >= 80 %}progress-bar-warning{% else %}progress-bar-success{% endif %}"
+                            style="width: {{ (item.percentage if item.percentage <= 100 else 100) }}%">
+                        </div>
+                    </div>
+
+                    <!-- Budget Info -->
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                <i data-lucide="target" class="w-3 h-3"></i>
+                                Anggaran
+                            </span>
+                            <strong class="text-gray-900 dark:text-white">Rp {{ "{:,.0f}".format(item.budget)}}</strong>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                <i data-lucide="activity" class="w-3 h-3"></i>
+                                Terpakai
+                            </span>
+                            <strong class="text-gray-900 dark:text-white">Rp {{ "{:,.0f}".format(item.actual)}}</strong>
+                        </div>
+                        <div
+                            class="flex items-center justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
+                            {% if item.remaining >= 0 %}
+                            <span class="text-success flex items-center gap-1">
+                                <i data-lucide="check-circle-2" class="w-3 h-3"></i>
+                                Sisa Anggaran
+                            </span>
+                            <strong class="text-success">Rp {{ "{:,.0f}".format(item.remaining) }}</strong>
+                            {% else %}
+                            <span class="text-danger flex items-center gap-1">
+                                <i data-lucide="alert-octagon" class="w-3 h-3"></i>
+                                Lebih
+                            </span>
+                            <strong class="text-danger">Rp {{ "{:,.0f}".format(-item.remaining) }}</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex flex-col gap-2">
+                        <a href="/transactions?category={{ item.category | urlencode }}&year={{ year }}&month={{ month }}&transaction_type=expense"
+                            class="w-full btn btn-primary btn-sm justify-center">
+                            <i data-lucide="list" class="w-3 h-3"></i>
+                            Detail Transaksi
+                        </a>
+                        <button onclick="editBudget({{ item.category | tojson | safe }}, {{ item.budget }})"
+                            class="w-full btn btn-secondary btn-sm justify-center">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                            Edit Anggaran
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Enhanced Empty State -->
+            <div class="py-16 text-center">
+                <div
+                    class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+                    <i data-lucide="inbox" class="w-12 h-12 text-gray-400"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Belum Ada Anggaran</h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-6">Mulai atur anggaran pertama Anda untuk bulan ini!</p>
+                <button onclick="document.getElementById('category').focus()" class="btn btn-primary">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Tambah Anggaran Pertama
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Toast Notification
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+
+        const icon = type === 'success' ? 'check-circle' : 'alert-circle';
+        const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+
+        toast.innerHTML = `
+            <i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i>
+            <span class="flex-1 font-medium">${message}</span>
+            <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        `;
+
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Toggle Budget Type
+    function toggleBudgetType(type) {
+        const amountLabel = document.getElementById('amount_label');
+        const amountIcon = document.getElementById('amount_icon');
+        const amountInput = document.getElementById('amount');
+        const isPercentageInput = document.getElementById('is_percentage');
+        const helperText = document.getElementById('helper_text');
+
+        if (type === 'percentage') {
+            amountLabel.textContent = 'Persentase (%)';
+            amountInput.placeholder = '1-100';
+            amountInput.max = 100;
+            isPercentageInput.value = 'true';
+            helperText.classList.remove('hidden');
+            amountIcon.setAttribute('data-lucide', 'percent');
+        } else {
+            amountLabel.textContent = 'Jumlah Anggaran (Rp)';
+            amountInput.placeholder = ' ';
+            amountInput.removeAttribute('max');
+            isPercentageInput.value = 'false';
+            helperText.classList.add('hidden');
+            amountIcon.setAttribute('data-lucide', 'banknote');
+        }
+
+        lucide.createIcons();
+    }
+
+    // Edit Budget
+    function editBudget(category, amount) {
+        const categorySelect = document.getElementById('category');
+        const amountInput = document.getElementById('amount');
+
+        categorySelect.value = category;
+        amountInput.value = amount;
+
+        // Scroll to form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Focus amount input
+        setTimeout(() => amountInput.focus(), 500);
+    }
+
+    // Export Budget
+    function exportBudget() {
+        const budgetData = {{ budgets | tojson | default ('[]')
+    }};
+
+    if (!budgetData || budgetData.length === 0) {
+        showToast('Tidak ada data anggaran untuk diexport', 'error');
+        return;
+    }
+
+    showToast('Mengunduh data anggaran...', 'success');
+
+    let csv = 'Kategori,Anggaran (Rp),Terpakai (Rp),Persentase (%),Sisa Anggaran (Rp),Status\\n';
+
+    budgetData.forEach(item => {
+        const status = item.is_over ? 'Over Budget' : (item.percentage >= 80 ? 'Warning' : 'On Track');
+        csv += `"${item.category}",${item.budget},${item.actual},${item.percentage.toFixed(1)},${item.remaining},"${status}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `budget_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => {
+        showToast('Data berhasil diunduh! 📥', 'success');
+    }, 500);
+    }
+
+    // Form submission toast
+    document.querySelector('form[action="/budget"]')?.addEventListener('submit', function (e) {
+        sessionStorage.setItem('showBudgetToast', 'true');
+    });
+
+    // Show toast on page load if needed
+    window.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('showBudgetToast') === 'true') {
+            showToast('Anggaran berhasil disimpan! 🎉', 'success');
+            sessionStorage.removeItem('showBudgetToast');
+        }
+    });
+
+    // Chart Configuration
+    function getChartColors() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            textColor: isDark ? '#E5E7EB' : '#374151'
+        };
+    }
+
+    // Budget Allocation Chart
+    const budgetData = {{ budgets | tojson | default ('null') }};
+
+    if (budgetData && budgetData.length > 0) {
+        const chartCtx = document.getElementById('budgetChart');
+        if (chartCtx) {
+            const chartInstance = new Chart(chartCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: budgetData.map(item => item.category),
+                    datasets: [{
+                        data: budgetData.map(item => item.budget),
+                        backgroundColor: [
+                            '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
+                            '#10b981', '#14b8a6', '#06b6d4', '#ef4444'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: getChartColors().textColor,
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            callbacks: {
+                                label: function (context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': Rp ' + new Intl.NumberFormat('id-ID').format(context.parsed) + ` (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update chart colors on theme change
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'class') {
+                        chartInstance.options.plugins.legend.labels.color = getChartColors().textColor;
+                        chartInstance.update();
+                    }
+                });
+            });
+
+            observer.observe(document.documentElement, { attributes: true });
+        }
+    }
+</script>
+{% endblock %}
